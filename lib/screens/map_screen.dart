@@ -320,7 +320,7 @@ class _PlacesMapViewState extends State<PlacesMapView> {
         '  public_kindergarten 是否在列表中: ${categories.contains('public_kindergarten')}');
 
     final queryParameters = <String, List<String>>{
-      "category": categories, // ⭐ 關鍵：多 category
+      "category": categories,
       if (bbox != null) "bbox": [bbox],
       if (city != null) "city": [city],
       if (district != null) "district": [district],
@@ -668,12 +668,10 @@ class _PlacesMapViewState extends State<PlacesMapView> {
         (_selectedCity != null || _selectedDistrict != null));
     final String? bbox = useBbox ? _currentBboxString() : null;
 
-    // 步驟 1: 先從緩存載入（立即顯示，僅當使用 bbox 時）
     if (useBbox) {
       await _loadFromCacheFirst(bbox: bbox!, categories: cats);
     }
 
-    // 步驟 2: 從 API 刷新數據（背景更新）
     setState(() {
       _loading = true;
       _error = null;
