@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../config/theme.dart';
 import '../service/api_service.dart';
 import '../service/database_helper.dart';
@@ -26,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 模擬原本的環境數據 (保留舊版型用)
   final bool _isGrowthSpurt = true; 
-
+  List<Map<String, dynamic>> _growthRecords = [];
   // 計算月齡
   double get _currentAgeMonths {
     final now = DateTime.now();
@@ -73,6 +74,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // 2. 🔥 讀取最新體溫 (新增的邏輯)
     final temp = await DatabaseHelper.instance.getLatestTemperature();
+
+    // 3. 讀取生長紀錄 (身高體重)
+    final allRecords = await DatabaseHelper.instance.readAllRecords();
+    setState(() {
+      _latestTemp = temp;
+      _growthRecords = allRecords.where((r) => r['type'] == 'growth_body').toList();
+      // 依時間排序：舊 -> 新
+      _growthRecords.sort((a, b) => a['time'].compareTo(b['time']));
+    });
     setState(() {
       _latestTemp = temp; 
     });
@@ -250,6 +260,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildTimeSensitiveSection(),
                   const SizedBox(height: 24),
 
+                  // 4. 生長建議 (維持原本樣式)
+                  _buildSectionTitle('生長趨勢分析', Icons.ssid_chart),
+                  const SizedBox(height: 10),
+                  _buildGrowthTrendSection(), 
+                  const SizedBox(height: 24),
+
                   // 2. 適齡繪本 (新增欄位，使用 API 資料)
                   _buildSectionTitle('適齡繪本推薦', Icons.menu_book_rounded),
                   const SizedBox(height: 10),
@@ -262,11 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildArticlesSection(),
                   const SizedBox(height: 24),
 
-                  // 4. 生長建議 (維持原本樣式)
-                  _buildSectionTitle('生長趨勢分析', Icons.ssid_chart),
-                  const SizedBox(height: 10),
-                  _buildTrendRecommendations(),
-                  const SizedBox(height: 40),
+                  
                 ],
               ),
             ),
@@ -274,7 +286,78 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --- UI 元件區塊 ---
+  Widget _buildGrowthTrendSection() {
+    return Column(
+      children: [
+        // 1. 生長曲線圖表卡片
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('體重成長曲線', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 180,
+                child: _growthRecords.isEmpty 
+                  ? const Center(child: Text('尚無身高體重紀錄', style: TextStyle(color: Colors.grey)))
+                  : LineChart(_buildWeightChartData()),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 8.0),
+                child: Text('※ 藍線代表體重 (kg)，橫軸為紀錄點', style: TextStyle(fontSize: 10, color: Colors.grey)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // 2. 原本的生長建議
+        _buildTrendRecommendations(),
+      ],
+    );
+  }
 
+  // 4. 構建圖表資料邏輯
+  LineChartData _buildWeightChartData() {
+    List<FlSpot> spots = [];
+    final RegExp regExp = RegExp(r'體重:([\d.]+)kg');
+
+    for (int i = 0; i < _growthRecords.length; i++) {
+      final match = regExp.firstMatch(_growthRecords[i]['value']);
+      if (match != null) {
+        final val = double.tryParse(match.group(1)!) ?? 0;
+        spots.add(FlSpot(i.toDouble(), val));
+      }
+    }
+
+    return LineChartData(
+      gridData: const FlGridData(show: false),
+      titlesData: const FlTitlesData(
+        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30)),
+        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      ),
+      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade200)),
+      lineBarsData: [
+        LineChartBarData(
+          spots: spots,
+          isCurved: true,
+          color: AppTheme.primaryColor,
+          barWidth: 3,
+          isStrokeCapRound: true,
+          dotData: const FlDotData(show: true),
+          belowBarData: BarAreaData(show: true, color: AppTheme.primaryColor.withOpacity(0.1)),
+        ),
+      ],
+    );
+  }
   Widget _buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [
@@ -677,38 +760,34 @@ final rawArticles = _apiData?['articles'] as List?;
 
   // 4. 生長建議 (保留舊版邏輯)
   Widget _buildTrendRecommendations() {
-    return Column(
-      children: [
-        if (_isGrowthSpurt)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.purple.shade50,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.purple.shade100),
-            ),
-            child: Row(
+    if (!_isGrowthSpurt) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.purple.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.purple.shade100),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.trending_up, color: Colors.purple),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.trending_up, color: Colors.purple),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('生長衝刺期 (猛長期)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.purple)),
-                      SizedBox(height: 4),
-                      Text('最近生長曲線變陡，寶寶可能食慾大增或情緒不穩', style: TextStyle(fontSize: 13, color: Colors.purple)),
-                    ],
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => _showDetailDialog('猛長期護理', '猛長期通常持續 2-7 天，寶寶會頻繁討奶，請按需餵養。情緒方面請多給予安撫與抱抱。'),
-                  child: const Text('如何安撫'),
-                ),
+                Text('生長衝刺期 (猛長期)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.purple)),
+                SizedBox(height: 4),
+                Text('最近生長曲線變陡，寶寶可能食慾大增或情緒不穩', style: TextStyle(fontSize: 13, color: Colors.purple)),
               ],
             ),
           ),
-      ],
+          TextButton(
+            onPressed: () => _showDetailDialog('猛長期護理', '猛長期通常持續 2-7 天，寶寶會頻繁討奶，請按需餵養。情緒方面請多給予安撫與抱抱。'),
+            child: const Text('如何安撫'),
+          ),
+        ],
+      ),
     );
   }
 }
