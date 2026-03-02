@@ -257,72 +257,152 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: GestureDetector(
-          onTap: _selectBirthDate,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('個人化推薦', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 22)),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '寶寶 $_formattedAge', 
-                    style: const TextStyle(fontSize: 14, color: AppTheme.subTextColor, fontWeight: FontWeight.normal)
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.edit, size: 14, color: AppTheme.primaryColor),
-                ],
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh, color: Colors.grey), onPressed: _loadData),
-        ],
-      ),
+      backgroundColor: Colors.transparent, // 讓背景圖透過來
       body: _isLoading 
           ? const Center(child: CircularProgressIndicator()) 
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.zero,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. 即時快訊 (維持原本樣式，使用模擬資料)
-                  _buildSectionTitle('今日環境與警示 (Live)', Icons.rss_feed),
-                  const SizedBox(height: 10),
-                  _buildTimeSensitiveSection(),
-                  const SizedBox(height: 24),
-
-                  // 4. 生長建議 (維持原本樣式)
-                  _buildSectionTitle('生長趨勢分析', Icons.ssid_chart),
-                  const SizedBox(height: 10),
-                  _buildGrowthTrendSection(), 
-                  const SizedBox(height: 24),
-
-                  // 2. 適齡繪本 (新增欄位，使用 API 資料)
-                  _buildSectionTitle('適齡繪本推薦', Icons.menu_book_rounded),
-                  const SizedBox(height: 10),
-                  _buildBooksSection(), // 橫向捲動
-                  const SizedBox(height: 24),
-
-                  // 3. 精選文章 (原本的發展階段，改用 API 文章資料)
-                  _buildSectionTitle('精選衛教文章', Icons.article_outlined),
-                  const SizedBox(height: 10),
-                  _buildArticlesSection(),
-                  const SizedBox(height: 24),
-
+                  _buildHeaderSection(),
                   
-                ],
-              ),
+                  Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+                      
+                      // 5. 實作圖片 1 下方的「今日環境與警示」卡片
+                      _buildTimeSensitiveSection(),
+                      
+                      const SizedBox(height: 24),
+
+                      // 6. 生長趨勢分析 (圖片 2 樣式)
+                      _buildSectionTitle('生長趨勢分析', Icons.ssid_chart),
+                      const SizedBox(height: 10),
+                      _buildGrowthTrendSection(), 
+
+                      const SizedBox(height: 24),
+
+                      // 7. 適齡繪本推薦 (圖片 2 樣式)
+                      _buildSectionTitle('適齡繪本推薦', Icons.menu_book_rounded),
+                      const SizedBox(height: 10),
+                      _buildBooksSection(), 
+
+                      const SizedBox(height: 24),
+
+                      // 8. 精選衛教文章 (圖片 2 樣式)
+                      _buildSectionTitle('精選衛教文章', Icons.article_outlined),
+                      const SizedBox(height: 10),
+                      _buildArticlesSection(),
+                      
+                      const SizedBox(height: 40), // 留白避免被導覽列遮住
+                    ],
+                  ),
+                ),
+              ],
             ),
+          ),
     );
   }
-
+  Widget _buildHeaderSection() {
+  return Stack(
+    alignment: Alignment.topCenter,
+    children: [
+      // 1. 頂部橘色圓弧背景
+      Container(
+        height: 200,
+        decoration: const BoxDecoration(
+          color: Color(0xFFFF8C00), // 圖片中的主橘色
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.elliptical(250, 125), // 達成下凹的圓弧效果
+          ),
+        ),
+      ),
+      
+      // 2. 頭像與月齡資訊內容
+      Column(
+        children: [
+          const SizedBox(height: 100), // 往下偏移讓頭像橫跨背景邊界
+          
+          // 圓形頭像區塊
+          Container(
+            padding: const EdgeInsets.all(8), // 白色外圈厚度
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black12, blurRadius: 10),
+              ],
+            ),
+            child: const CircleAvatar(
+              radius: 65,
+              backgroundColor: Color(0xFFFDEFD5), // 頭像背景淡色
+              // 請確保 assets 中有此圖片並在 pubspec.yaml 註冊
+              backgroundImage: AssetImage('image/baby_owl.png'), 
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // 3. 橘色月齡標籤按鈕
+          GestureDetector(
+            onTap: () => _selectBirthDate(), // 觸發原本的日期選擇功能
+            child: Stack(
+              alignment: Alignment.topCenter,
+              clipBehavior: Clip.none,
+              children: [
+                // 主要橘色長橢圓標籤
+                Container(
+                  margin: const EdgeInsets.only(top: 15), // 為上方蛋糕圖示留空間
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF8C00),
+                    borderRadius: BorderRadius.circular(30), 
+                    border: Border.all(color: const Color(0xFFD3760E), width: 2),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '寶寶 $_formattedAge', // 顯示動態計算的月齡
+                        style: const TextStyle(
+                          color: Color(0xFF4F000B), // 深褐色文字
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.edit, color: Color(0xFF4F000B), size: 18),
+                    ],
+                  ),
+                ),
+                // 上方的蛋糕圖示按鈕
+                Positioned(
+                  top: -5,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF98C12),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFD3760E), width: 1.5),
+                    ),
+                    child: const Icon(Icons.cake, color: Color(0xFF4F000B), size: 24),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+}
   // --- UI 元件區塊 ---
   Widget _buildGrowthTrendSection() {
     return Column(
@@ -442,52 +522,171 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 }
   Widget _buildSectionTitle(String title, IconData icon) {
-    return Row(
+  return Container(
+    margin: const EdgeInsets.symmetric(vertical: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    decoration: BoxDecoration(
+      color: Color(0xfffff5ea).withOpacity(0.9), // 淺色背景
+      borderRadius: BorderRadius.circular(20), // 圓潤邊角
+      border: Border.all(
+        color: const Color(0xFFFF8C00), // 淺橘色邊框
+        width: 1.5,
+      ),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min, // 讓容器寬度隨文字長度縮放
       children: [
-        Icon(icon, size: 20, color: AppTheme.primaryColor),
+        Icon(icon, size: 20, color: const Color(0xFFFF8C00)), // 橘色圖示
         const SizedBox(width: 8),
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF4A0E0E), // 深褐色文字
+          ),
+        ),
       ],
-    );
-  }
+    ),
+  );
+}
 
   // 1. 即時快訊 (保留舊版邏輯)
   // 1. 即時快訊區塊 (整合：流感警示 + 即時氣溫 + API 警示)
   Widget _buildTimeSensitiveSection() {
     final List<Widget> cards = [];
 
-    // --- (1) 流感警示卡片 (最優先) ---
-    if (_alertSummary?['flu_warning'] == true) {
-      cards.add(_buildFluCard());
-    }
-
-    // --- (2) 即時氣溫卡片 (次優先) ---
-    // 只有當抓到氣溫時才顯示
+    // --- (1) 氣溫卡片 (維持原本文字排版，僅換橘色背景) ---
     if (_weatherTemp != null) {
-      cards.add(_buildWeatherCard(_weatherTemp!));
+      cards.add(_buildOrangeInfoCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.thermostat, size: 16, color: Color(0xFF4A0E0E)),
+                const SizedBox(width: 6),
+                const Text('目前位置', style: TextStyle(fontSize: 12, color: Color(0xFF4A0E0E))),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              '${_weatherTemp!.toStringAsFixed(1)}°C',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 32, color: Color(0xFF4A0E0E)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _weatherTemp! < 16 ? '天氣寒冷，注意保暖' : (_weatherTemp! > 30 ? '氣溫炎熱，多喝水' : '氣溫舒適，適合外出'),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF4A0E0E)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ));
     }
 
-    // --- (3) 一般 API 警示卡片 ---
+    // --- (2) 流感警示卡片 ---
+    if (_alertSummary?['flu_warning'] == true) {
+      cards.add(_buildOrangeInfoCard(
+        onTap: () => _showDetailDialog('流感疫情警報', _alertSummary?['message'] ?? '請注意防疫'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.sick, size: 16, color: Color(0xFF4A0E0E)),
+                SizedBox(width: 8),
+                Text('疾管署警示', style: TextStyle(fontSize: 12, color: Color(0xFF4A0E0E))),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text('流感疫情高峰警報', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF4A0E0E))),
+            const SizedBox(height: 4),
+            Text(
+              _alertSummary?['message'] ?? '請注意防疫',
+              style: const TextStyle(fontSize: 12, color: Color(0xFF4A0E0E)),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ));
+    }
+
+    // --- (3) 一般 API 警示卡片 (維持原本左右排版邏輯) ---
     for (var alert in _alerts) {
-      cards.add(_buildNormalAlertCard(alert));
+      final String source = alert['source'] ?? '通知';
+      final String title = alert['title'] ?? '無標題';
+      final String desc = alert['content_snippet'] ?? '';
+
+      cards.add(_buildOrangeInfoCard(
+        onTap: () => _showDetailDialog(title, alert['content'] ?? desc, url: alert['link']),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.info, size: 14, color: Color(0xFF4A0E0E)),
+                const SizedBox(width: 8),
+                Text(source, style: const TextStyle(fontSize: 12, color: Color(0xFF4A0E0E))),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF4A0E0E)), maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 4),
+            Expanded(
+              child: Text(desc, style: const TextStyle(fontSize: 12, color: Color(0xFF4A0E0E)), maxLines: 2, overflow: TextOverflow.ellipsis)
+            ),
+          ],
+        ),
+      ));
     }
 
-    // 如果完全沒資料
-    if (cards.isEmpty) {
-      return Container(
-        width: double.infinity,
+    // 組合外層框架
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Color(0xFFfff5ea),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFF8C00), width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '今日環境與警示',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4A0E0E)),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 150, // 增加高度以容納原本的文字排版
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: cards.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              itemBuilder: (context, index) => SizedBox(
+                width: 180, // 維持原本卡片寬度
+                child: cards[index],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 輔助元件：橘色圓角卡片
+  Widget _buildOrangeInfoCard({required Widget child, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-        child: const Text('目前無環境警示', style: TextStyle(color: Colors.grey)),
-      );
-    }
-
-    // 回傳橫向列表
-    return SizedBox(
-      height: 150,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: cards,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF98C12), // 橘色背景
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: child,
       ),
     );
   }
@@ -692,7 +891,6 @@ class _HomeScreenState extends State<HomeScreen> {
         separatorBuilder: (c, i) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final item = books[index];
-          final String sourceUrl = item['source_url'] ?? '';
           return GestureDetector(
             onTap: () => _showDetailDialog(
               item['title'] ?? '', 
@@ -789,7 +987,6 @@ final rawArticles = _apiData?['articles'] as List?;
         final item = displayArticles[index];
         final title = item['title'] ?? '無標題';
         final content = item['content'] ?? '無內容';
-        final String sourceUrl = item['source_url'] ?? '';
         final tags = item['tags'] != null ? List<String>.from(item['tags']) : [];
 
         // 下面這段維持原本的 UI 渲染邏輯

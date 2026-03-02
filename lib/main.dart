@@ -54,42 +54,79 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    double screenWidth = MediaQuery.of(context).size.width;
+    double itemWidth = screenWidth / 4;
+    return Container(
+      decoration: const BoxDecoration(
+      image: DecorationImage(
+        image: AssetImage('image/background.png'), // 您的背景圖路徑
+        fit: BoxFit.cover, // 填滿整個螢幕
+        repeat: ImageRepeat.repeat, // 圖片重複填充，適合斜紋背景
+        // 如果是圖片 3 那種斜紋，可以使用 repeat: ImageRepeat.repeat
+      ),
+    ),
+    child:Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (int index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        backgroundColor: Colors.white,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: '推薦',
+      bottomNavigationBar: Stack(
+        alignment: Alignment.bottomCenter,
+        clipBehavior: Clip.none, // 允許圓弧超出邊界
+        children: [
+          // 1. 靜態切換的半圓形
+          // 將 AnimatedPositioned 改為 Positioned 就不會有滑動動畫
+          Positioned(
+            // 直接計算當前選中 index 的位置
+            left: (itemWidth * _currentIndex) + (itemWidth / 2) - 30, 
+            top: -15, // 向上突起高度
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: const BoxDecoration(
+                color: Color(0xff4F000B), // 顏色與導覽列一致
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.photo_camera_back_outlined), // 紀錄改用這個圖示更像相簿/紀錄
-            selectedIcon: Icon(Icons.photo_camera_back),
-            label: '紀錄',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
-            label: '地圖',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.smart_toy_outlined), // AI 用機器人或星星圖示
-            selectedIcon: Icon(Icons.smart_toy),
-            label: 'AI 助手',
+          
+          // 2. 原本的 NavigationBar
+          NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (int index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            backgroundColor: const Color(0xff4F000B),
+            indicatorColor: Colors.transparent, // 隱藏預設指示器
+            surfaceTintColor: Colors.transparent,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined, color: Color(0x80DBC8B6)),
+                selectedIcon: Icon(Icons.home, color: Color(0xffDBC8B6)),
+                label: '推薦',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.photo_camera_back_outlined, color: Color(0x80DBC8B6)),
+                selectedIcon: Icon(Icons.photo_camera_back, color: Color(0xffDBC8B6)),
+                label: '紀錄',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.map_outlined, color: Color(0x80DBC8B6)),
+                selectedIcon: Icon(Icons.map, color: Color(0xffDBC8B6)),
+                label: '地圖',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.smart_toy_outlined, color: Color(0x80DBC8B6)),
+                selectedIcon: Icon(Icons.smart_toy, color: Color(0xffDBC8B6)),
+                label: 'AI 助手',
+              ),
+            ],
           ),
         ],
       ),
+    ),
     );
   }
 }
