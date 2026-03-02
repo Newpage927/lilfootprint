@@ -11,7 +11,7 @@ class AiChatScreen extends StatefulWidget {
 }
 
 class AiChatScreenState extends State<AiChatScreen> {
-  static const String _myApiKey = "AIzaSyBgUS-prKp5wvvlz67ati09z8vu0WPIJ0E";
+  static const String _myApiKey = "";
 
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();

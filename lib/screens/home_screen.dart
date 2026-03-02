@@ -6,6 +6,7 @@ import '../service/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart'; // 新增
+import '../service/growth_data_service.dart'; // 引入新檔案
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -198,23 +199,60 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
   // --- 新增：顯示詳情的彈窗 ---
-  void _showDetailDialog(String title, String content) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: SingleChildScrollView(
-          child: Text(content, style: const TextStyle(height: 1.5, fontSize: 16)),
+  void _showDetailDialog(String title, String content, {String? url}) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min, // 讓視窗根據內容收縮
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(content, style: const TextStyle(height: 1.5, fontSize: 16)),
+            if (url != null && url.isNotEmpty) ...[
+              const Divider(height: 32),
+              const Text('查看更多', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () {
+                  Navigator.of(ctx).pop(); // 先關閉彈窗
+                  _openLink(url);          // 再開啟連結
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.language, size: 18, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '前往外部連結',
+                          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Icon(Icons.open_in_new, size: 16, color: Colors.blue),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('關閉'),
-          ),
-        ],
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('關閉'),
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -299,19 +337,19 @@ class _HomeScreenState extends State<HomeScreen> {
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('體重成長曲線', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 180,
-                child: _growthRecords.isEmpty 
-                  ? const Center(child: Text('尚無身高體重紀錄', style: TextStyle(color: Colors.grey)))
-                  : LineChart(_buildWeightChartData()),
-              ),
-              const Padding(
-                padding: EdgeInsets.only(top: 8.0),
-                child: Text('※ 藍線代表體重 (kg)，橫軸為紀錄點', style: TextStyle(fontSize: 10, color: Colors.grey)),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text('BMI 成長曲線 (比對全國標準)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
+      const SizedBox(height: 16),
+      SizedBox(
+        height: 180,
+        child: _growthRecords.isEmpty 
+          ? const Center(child: Text('尚無身高體重紀錄', style: TextStyle(color: Colors.grey)))
+          : LineChart(_buildBmiChartData()), // 調用新的 BMI 圖表數據
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 8.0),
+            child: Text('※ 紅/綠/橘虛線分別代表 97th, 50th, 3rd 百分位', style: TextStyle(fontSize: 10, color: Colors.grey)),
               ),
             ],
           ),
@@ -322,42 +360,87 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+  // 1. 定義 BMI 參考數據 (以男童為例，可根據需求切換)
+  final referenceData = GrowthDataService.boyBmiReference;
+  // 2. 修改圖表構建邏輯
+  LineChartData _buildBmiChartData() {
+  List<FlSpot> babyBmiSpots = [];
+  
+  // 正則表達式解析 "身高:170cm, 體重:60kg"
+  final RegExp heightExp = RegExp(r'身高:([\d.]+)cm');
+  final RegExp weightExp = RegExp(r'體重:([\d.]+)kg');
 
-  // 4. 構建圖表資料邏輯
-  LineChartData _buildWeightChartData() {
-    List<FlSpot> spots = [];
-    final RegExp regExp = RegExp(r'體重:([\d.]+)kg');
-
-    for (int i = 0; i < _growthRecords.length; i++) {
-      final match = regExp.firstMatch(_growthRecords[i]['value']);
-      if (match != null) {
-        final val = double.tryParse(match.group(1)!) ?? 0;
-        spots.add(FlSpot(i.toDouble(), val));
+  for (var record in _growthRecords) {
+    final hMatch = heightExp.firstMatch(record['value']);
+    final wMatch = weightExp.firstMatch(record['value']);
+    
+    if (hMatch != null && wMatch != null) {
+      double heightM = (double.tryParse(hMatch.group(1)!) ?? 0) / 100; // 轉為公尺
+      double weightKg = double.tryParse(wMatch.group(1)!) ?? 0;
+      
+      if (heightM > 0) {
+        double bmi = weightKg / (heightM * heightM);
+        
+        // 計算該紀錄時的年齡 (歲)
+        DateTime recordTime = DateTime.parse(record['time']);
+        double ageInYears = recordTime.difference(_babyBirthDate).inDays / 365.0;
+        
+        babyBmiSpots.add(FlSpot(ageInYears, double.parse(bmi.toStringAsFixed(2))));
       }
     }
-
-    return LineChartData(
-      gridData: const FlGridData(show: false),
-      titlesData: const FlTitlesData(
-        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30)),
-        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      ),
-      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade200)),
-      lineBarsData: [
-        LineChartBarData(
-          spots: spots,
-          isCurved: true,
-          color: AppTheme.primaryColor,
-          barWidth: 3,
-          isStrokeCapRound: true,
-          dotData: const FlDotData(show: true),
-          belowBarData: BarAreaData(show: true, color: AppTheme.primaryColor.withOpacity(0.1)),
-        ),
-      ],
-    );
   }
+
+  return LineChartData(
+    minX: 0,
+    maxX: 5, // 設定顯示到 5 歲
+    minY: 10,
+    maxY: 22,
+    titlesData: FlTitlesData(
+      bottomTitles: AxisTitles(
+        axisNameWidget: const Text('年齡 (歲)', style: TextStyle(fontSize: 10)),
+        sideTitles: SideTitles(showTitles: true, reservedSize: 22),
+      ),
+      leftTitles: AxisTitles(
+        axisNameWidget: const Text('BMI', style: TextStyle(fontSize: 10)),
+        sideTitles: SideTitles(showTitles: true, reservedSize: 30),
+      ),
+      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    ),
+    lineBarsData: [
+      // 背景參考線：第 97 百分位 (肥胖警示)
+      LineChartBarData(
+        spots: referenceData.map((e) => FlSpot(e['age'], e['p97'])).toList(),
+        color: Colors.red.withOpacity(0.3),
+        dashArray: [5, 5],
+        dotData: const FlDotData(show: false),
+      ),
+      // 背景參考線：第 50 百分位 (標準中位數)
+      LineChartBarData(
+        spots: referenceData.map((e) => FlSpot(e['age'], e['p50'])).toList(),
+        color: Colors.green.withOpacity(0.3),
+        dashArray: [5, 5],
+        dotData: const FlDotData(show: false),
+      ),
+      // 背景參考線：第 3 百分位 (過輕警示)
+      LineChartBarData(
+        spots: referenceData.map((e) => FlSpot(e['age'], e['p3'])).toList(),
+        color: Colors.orange.withOpacity(0.3),
+        dashArray: [5, 5],
+        dotData: const FlDotData(show: false),
+      ),
+      // 寶寶的實際 BMI 曲線
+      LineChartBarData(
+        spots: babyBmiSpots,
+        isCurved: true,
+        color: AppTheme.primaryColor,
+        barWidth: 4,
+        dotData: const FlDotData(show: true),
+        belowBarData: BarAreaData(show: true, color: AppTheme.primaryColor.withOpacity(0.1)),
+      ),
+    ],
+  );
+}
   Widget _buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [
@@ -602,15 +685,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return SizedBox(
-      height: 180, // 設定高度
+      height: 220, // 設定高度
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: books.length,
         separatorBuilder: (c, i) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final item = books[index];
+          final String sourceUrl = item['source_url'] ?? '';
           return GestureDetector(
-            onTap: () => _showDetailDialog(item['title'] ?? '', item['description'] ?? '無介紹'),
+            onTap: () => _showDetailDialog(
+              item['title'] ?? '', 
+              item['content'] ?? item['description'] ?? '', 
+              url: item['source_url'] // 傳入 URL
+            ),
             child: Container(
               width: 140,
               padding: const EdgeInsets.all(12),
@@ -701,6 +789,7 @@ final rawArticles = _apiData?['articles'] as List?;
         final item = displayArticles[index];
         final title = item['title'] ?? '無標題';
         final content = item['content'] ?? '無內容';
+        final String sourceUrl = item['source_url'] ?? '';
         final tags = item['tags'] != null ? List<String>.from(item['tags']) : [];
 
         // 下面這段維持原本的 UI 渲染邏輯
@@ -720,7 +809,11 @@ final rawArticles = _apiData?['articles'] as List?;
         }
 
         return GestureDetector(
-          onTap: () => _showDetailDialog(title, content),
+          onTap: () => _showDetailDialog(
+            item['title'] ?? '', 
+            item['content'] ?? item['description'] ?? '', 
+            url: item['source_url'] // 傳入 URL
+          ),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
