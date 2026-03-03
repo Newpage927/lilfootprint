@@ -546,36 +546,6 @@ Widget _buildGrowthTrendSection() {
   );
 }
   
-  
-  Widget _buildSectionTitle(String title, IconData icon) {
-  return Container(
-    margin: const EdgeInsets.symmetric(vertical: 8),
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    decoration: BoxDecoration(
-      color: Color(0xfffff5ea).withOpacity(0.9), // 淺色背景
-      borderRadius: BorderRadius.circular(20), // 圓潤邊角
-      border: Border.all(
-        color: const Color(0xFFFF8C00), // 淺橘色邊框
-        width: 1.5,
-      ),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min, // 讓容器寬度隨文字長度縮放
-      children: [
-        Icon(icon, size: 20, color: const Color(0xFFFF8C00)), // 橘色圖示
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF4A0E0E), // 深褐色文字
-          ),
-        ),
-      ],
-    ),
-  );
-}
 
   // 1. 即時快訊 (保留舊版邏輯)
   // 1. 即時快訊區塊 (整合：流感警示 + 即時氣溫 + API 警示)

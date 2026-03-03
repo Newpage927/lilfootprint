@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'config/theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/records_screen.dart';
+import 'screens/record_history_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/ai_chat_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -48,6 +49,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   final List<Widget> _pages = [
     const HomeScreen(),   // 1. 個人化推薦
     const RecordsScreen(),// 2. 育兒紀錄 + 照片
+    const RecordHistoryScreen(), // 2.5 紀錄歷史
     const PlacesMapView(),    // 3. 地圖
     const AiChatScreen(), // 4. AI Chat
   ];
@@ -55,7 +57,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
-    double itemWidth = screenWidth / 4;
+    double itemWidth = screenWidth / 5;
     return Container(
       decoration: const BoxDecoration(
       image: DecorationImage(
@@ -111,6 +113,11 @@ class _MainScaffoldState extends State<MainScaffold> {
                 icon: Icon(Icons.photo_camera_back_outlined, color: Color(0x80DBC8B6)),
                 selectedIcon: Icon(Icons.photo_camera_back, color: Color(0xffDBC8B6)),
                 label: '紀錄',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.pie_chart_outline, color: Color(0x80DBC8B6)),
+                selectedIcon: Icon(Icons.pie_chart, color: Color(0xffDBC8B6)),
+                label: '分析',
               ),
               NavigationDestination(
                 icon: Icon(Icons.map_outlined, color: Color(0x80DBC8B6)),

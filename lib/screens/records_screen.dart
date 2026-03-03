@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // 需在 pubspec.yaml 加入 intl
 import '../config/theme.dart';
 import '../service/database_helper.dart';
-import 'record_history_screen.dart';
 
 // 定義疫苗類型 Enum
 enum VaccineType { bcg, hepB, fiveInOne, pneumococcal, flu, rotavirus, japaneseEnc, other }
@@ -34,119 +33,149 @@ class _RecordsScreenState extends State<RecordsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('詳細育兒紀錄'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history, color: Colors.black87),
-            tooltip: '查看歷史',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const RecordHistoryScreen()),
-              );
-            },
+      // 1. 強制讓 Scaffold 背景透明，確保只看到我們自定義的背景圖
+      backgroundColor: Colors.transparent, 
+      body: Stack(
+        children: [
+          // 2. 最底層：格子背景圖
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('image/background.png'),
+                repeat: ImageRepeat.repeat,
+              ),
+            ),
+          ),
+
+          // 3. 中層：頂部橘色不規則裝飾圖 (bg1.png)
+          // 放在 SafeArea 之外，才能真正貼齊螢幕頂部
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Image.asset(
+              'image/bg1.png', 
+              fit: BoxFit.fitWidth,
+            ),
+          ),
+
+          // 4. 最上層：滾動內容
+          SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                // 標題區塊：直接用 Padding 撐開高度，不要在裡面寫 Stack
+                SliverToBoxAdapter(
+                  child: Container(
+                    padding: const EdgeInsets.only(top: 40, left: 24, bottom: 20),
+                    child: const Text(
+                      '詳細育兒紀錄',
+                      style: TextStyle(
+                        fontSize: 32, 
+                        fontWeight: FontWeight.bold, 
+                        color: Color(0xFF4F000B),
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // 紀錄項目列表 (Grid)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 0.9,
+                    ),
+                    delegate: SliverChildListDelegate([
+                      _buildRecordCard('身高/體重', 'image/owl_growth.png', 'growth_body'),
+                      _buildRecordCard('睡眠紀錄', 'image/owl_sleep.png', 'routine_sleep'),
+                      _buildRecordCard('體溫', 'image/owl_temp.png', 'health_temp'),
+                      _buildRecordCard('疫苗接種', 'image/owl_vaccine.png', 'health_vaccine'),
+                    ]),
+                  ),
+                ),
+                
+                // 發展里程碑 (大卡片)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildLargeRecordCard('發展里程碑', 'image/owl_milestone.png', 'growth_milestone'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+    );
+  }
+  Widget _buildRecordCard(String label, String imagePath, String type) {
+    return GestureDetector(
+      onTap: () => _showRecordForm(context, _RecordItem(label, Icons.edit, Colors.orange, type)),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF9F0),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFFFF8C00), width: 3),
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 1. 生理成長 (身高、體重)
-            _buildSectionHeader('生理成長', Icons.show_chart),
-            _buildGrid(context, [
-              _RecordItem('身高/體重', Icons.straighten, Colors.green.shade100, 'growth_body'),
-            ]),
-            
-            const SizedBox(height: 24),
-
-            // 2. 日常作息 (睡眠)
-            _buildSectionHeader('日常作息', Icons.access_time),
-            _buildGrid(context, [
-              _RecordItem('睡眠紀錄', Icons.bed, Colors.indigo.shade100, 'routine_sleep'),
-              // 如果你要保留奶量、排泄，可以加回來，這裡先專注於你的新需求
-            ]),
-            
-            const SizedBox(height: 24),
-
-            // 3. 健康醫療 (體溫、疫苗)
-            _buildSectionHeader('健康醫療', Icons.medical_services),
-            _buildGrid(context, [
-              _RecordItem('體溫', Icons.thermostat, Colors.red.shade100, 'health_temp'),
-              _RecordItem('疫苗接種', Icons.vaccines, Colors.blue.shade100, 'health_vaccine'),
-            ]),
-
-            const SizedBox(height: 24),
-
-            // 4. 發展里程碑
-            _buildSectionHeader('發展里程碑', Icons.flag),
-            _buildGrid(context, [
-              _RecordItem('動作發展', Icons.directions_run, Colors.purple.shade100, 'growth_milestone'),
-            ]),
+            Image.asset(imagePath, height: 120, fit: BoxFit.contain), // 貓頭鷹插圖
+            const SizedBox(height: 8),
+            Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4F000B))),
           ],
         ),
       ),
     );
   }
-
-  // --- UI 建構區塊 ---
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: AppTheme.subTextColor),
-          const SizedBox(width: 8),
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textColor)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGrid(BuildContext context, List<_RecordItem> items) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3, // 改成 3 欄比較寬敞
-        childAspectRatio: 1.0,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return InkWell(
-          onTap: () => _showRecordForm(context, item),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 2))
-              ],
-              border: Border.all(color: item.color.withOpacity(0.5), width: 1),
+  Widget _buildLargeRecordCard(String label, String imagePath, String type) {
+    return GestureDetector(
+      onTap: () => _showRecordForm(context, _RecordItem(label, Icons.edit, Colors.orange, type)),
+      child: Container(
+        height: 140,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF9F0),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFFFF8C00), width: 3),
+        ),
+        child: Stack(
+          children: [
+            // 1. 左側主要貓頭鷹圖片
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Image.asset(imagePath, width: 80, fit: BoxFit.contain),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: item.color.withOpacity(0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(item.icon, color: Colors.black87, size: 28),
+            
+            // 2. 中間文字標題
+            Align(
+              alignment: Alignment.center,
+              child: Text(
+                label, 
+                style: const TextStyle(
+                  fontSize: 20, 
+                  fontWeight: FontWeight.bold, 
+                  color: Color(0xFF4F000B),
                 ),
-                const SizedBox(height: 8),
-                Text(item.label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              ],
+              ),
             ),
-          ),
-        );
-      },
+
+            // 3. 右下角的腳印圖 (如同圖 1 的樣式)
+            Positioned(
+              right: 0,
+              bottom: 10,
+              child: Image.asset(
+                'image/footprints.png', // 請確保您的 assets 資料夾中有這張腳印圖片
+                width: 80,             // 調整適合的大小
+                fit: BoxFit.contain,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
