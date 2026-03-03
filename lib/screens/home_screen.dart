@@ -198,58 +198,91 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
   // --- 新增：顯示詳情的彈窗 ---
-  void _showDetailDialog(String title, String content, {String? url}) {
-  showDialog(
+// 修改後的函式定義，增加 category 參數
+void _showDetailDialog(String title, String content, {String? url, String category = '衛教資訊'}) {
+  showGeneralDialog(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min, // 讓視窗根據內容收縮
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(content, style: const TextStyle(height: 1.5, fontSize: 16)),
-            if (url != null && url.isNotEmpty) ...[
-              const Divider(height: 32),
-              const Text('查看更多', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () {
-                  Navigator.of(ctx).pop(); // 先關閉彈窗
-                  _openLink(url);          // 再開啟連結
-                },
+    barrierDismissible: true,
+    barrierLabel: '',
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (ctx, anim1, anim2) {
+      return Center(
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 使用 ClipPath 達成左右挖空效果
+              ClipPath(
+                clipper: TicketClipper(),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  width: MediaQuery.of(context).size.width * 0.85,
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    color: const Color(0xFFE0E0E0),
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.language, size: 18, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '前往外部連結',
-                          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('文章類別：$category', style: const TextStyle(fontSize: 16, color: Color(0xFF4A0E0E), fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Text(title, style: const TextStyle(fontSize: 18, color: Color(0xFF4A0E0E), fontWeight: FontWeight.bold)),
+                        
+                        // 虛線位置建議與 TicketClipper 的 vOffset 對齊
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 37), // 這裡的高度調整要對準缺口
+                          child: Row(
+                            children: List.generate(20, (index) => Expanded(
+                              child: Container(color: Colors.white, height: 2, margin: const EdgeInsets.symmetric(horizontal: 2)),
+                            )),
+                          ),
                         ),
-                      ),
-                      Icon(Icons.open_in_new, size: 16, color: Colors.blue),
-                    ],
+                        
+                        //const Text('文章內容', style: TextStyle(fontSize: 18, color: Color(0xFF4A0E0E), fontWeight: FontWeight.bold)),
+                        //const SizedBox(height: 12),
+                        Text(content, style: const TextStyle(fontSize: 16, color: Color(0xFF4A0E0E), height: 1.5)),
+                        
+                        if (url != null && url.isNotEmpty) ...[
+                          // 第二條虛線
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            child: Row(
+                              children: List.generate(20, (index) => Expanded(
+                                child: Container(color: Colors.white, height: 2, margin: const EdgeInsets.symmetric(horizontal: 2)),
+                              )),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _openLink(url);
+                            },
+                            child: const Text('前往外部連結', style: TextStyle(fontSize: 18, color: Color(0xFF4A0E0E), fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+              // 下方的圓形關閉按鈕
+              GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  child: const Icon(Icons.close, color: Color(0xFF4A0E0E), size: 30),
+                ),
+              ),
             ],
-          ],
+          ),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('關閉'),
-        ),
-      ],
-    ),
+      );
+    },
   );
 }
 
@@ -279,21 +312,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 24),
 
                       // 6. 生長趨勢分析 (圖片 2 樣式)
-                      _buildSectionTitle('生長趨勢分析', Icons.ssid_chart),
                       const SizedBox(height: 10),
                       _buildGrowthTrendSection(), 
 
                       const SizedBox(height: 24),
 
                       // 7. 適齡繪本推薦 (圖片 2 樣式)
-                      _buildSectionTitle('適齡繪本推薦', Icons.menu_book_rounded),
-                      const SizedBox(height: 10),
+                      
                       _buildBooksSection(), 
 
                       const SizedBox(height: 24),
 
                       // 8. 精選衛教文章 (圖片 2 樣式)
-                      _buildSectionTitle('精選衛教文章', Icons.article_outlined),
                       const SizedBox(height: 10),
                       _buildArticlesSection(),
                       
@@ -405,26 +435,49 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- UI 元件區塊 ---
 // lib/screens/home_screen.dart 內部的修改
 
-  Widget _buildGrowthTrendSection() {
-    return Column(
+Widget _buildGrowthTrendSection() {
+  return Container(
+    // 加上橘色框框的外層裝飾
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFFfff5ea), // 淺米色背景
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(
+        color: const Color(0xFFFF8C00), // 橘色邊框顏色
+        width: 2,
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 樣式參考圖片 1：點擊查看生長曲線的入口卡片
+        // 區塊標題
+        const Text(
+          '生長趨勢分析',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF4A0E0E),
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // 1. 點擊查看生長曲線的入口卡片
         GestureDetector(
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => GrowthChartDetailScreen(
-                  babyBirthDate: _babyBirthDate, // 將首頁的生日變數傳遞給新頁面
+                  babyBirthDate: _babyBirthDate,
                 ),
               ),
             );
           },
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5), // 淺灰色背景
+              color: const Color(0xFFF5F5F5), // 淺灰色內容背景
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Row(
@@ -432,19 +485,66 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   '點擊查看生長曲線',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A0E0E)),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4A0E0E),
+                  ),
                 ),
                 Text('>>', style: TextStyle(fontSize: 18, color: Color(0xFF4A0E0E))),
               ],
             ),
           ),
         ),
+        
         const SizedBox(height: 12),
-        // 原有的猛長期建議卡片保留
-        _buildTrendRecommendations(),
+        
+        // 2. 猛長期建議卡片
+        if (_isGrowthSpurt)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.8), // 白色半透明背景
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.trending_up, color: Color(0xFFFF8C00)),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '生長衝刺期 (猛長期)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Color(0xFF4A0E0E),
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '最近生長曲線變陡，寶寶可能食慾大增或情緒不穩',
+                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _showDetailDialog(
+                    '猛長期護理',
+                    '猛長期通常持續 2-7 天，寶寶會頻繁討奶，請按需餵養。情緒方面請多給予安撫與抱抱。',
+                  ),
+                  child: const Text('如何安撫', style: TextStyle(color: Color(0xFFFF8C00))),
+                ),
+              ],
+            ),
+          ),
       ],
-    );
-  }
+    ),
+  );
+}
   
   
   Widget _buildSectionTitle(String title, IconData icon) {
@@ -515,7 +615,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // --- (2) 流感警示卡片 ---
     if (_alertSummary?['flu_warning'] == true) {
       cards.add(_buildOrangeInfoCard(
-        onTap: () => _showDetailDialog('流感疫情警報', _alertSummary?['message'] ?? '請注意防疫'),
+        onTap: () => _showDetailDialog('流感疫情警報', _alertSummary?['message'] ?? '請注意防疫',category: '流感疫情警報'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -547,7 +647,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final String desc = alert['content_snippet'] ?? '';
 
       cards.add(_buildOrangeInfoCard(
-        onTap: () => _showDetailDialog(title, alert['content'] ?? desc, url: alert['link']),
+        onTap: () => _showDetailDialog(title, alert['content'] ?? desc, url: alert['link'],category: '今日環境與警示'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -798,179 +898,181 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // 2. 適齡繪本 (新功能 - 橫向)
+// 2. 適齡繪本 (橫向滑動，符合圖1樣式)
   Widget _buildBooksSection() {
     final books = _apiData?['books'] as List?;
-    if (books == null || books.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-        child: const Text('目前無相關書籍推薦', style: TextStyle(color: Colors.grey)),
-      );
-    }
-
-    return SizedBox(
-      height: 220, // 設定高度
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: books.length,
-        separatorBuilder: (c, i) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final item = books[index];
-          return GestureDetector(
-            onTap: () => _showDetailDialog(
-              item['title'] ?? '', 
-              item['content'] ?? item['description'] ?? '', 
-              url: item['source_url'] // 傳入 URL
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF5EA), // 整個區塊的淺橘色背景
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFF8C00), width: 2), // 橘色大外框
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '適齡繪本推薦',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF4A0E0E),
             ),
-            child: Container(
-              width: 140,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
+          ),
+          const SizedBox(height: 16),
+          
+          if (books == null || books.isEmpty)
+            const Text('目前無相關書籍推薦', style: TextStyle(color: Colors.grey))
+          else
+            SizedBox(
+              height: 190, // 稍微增加高度以容納拉長的方框
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: books.length,
+                separatorBuilder: (c, i) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final item = books[index];
+                  return GestureDetector(
+                    onTap: () => _showDetailDialog(item['title'], item['description'], url: item['source_url'], category: '適齡繪本推薦'),
                     child: Container(
-                      width: double.infinity,
+                      width: 120,
+                      // 此 Container 即為「長棕色方框」，包含圖片與文字
                       decoration: BoxDecoration(
-                        color: Colors.amber.shade100,
-                        borderRadius: BorderRadius.circular(8),
+                        color: const Color(0xFFd8cec6), // 棕色/米色背景
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(color: const Color(0xFF4f000b), width: 1.5), // 深褐色邊框
                       ),
-                      child: const Center(child: Icon(Icons.menu_book, size: 40, color: Colors.amber)),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // 貓頭鷹圖片
+                          Expanded(
+                            child: Image.asset(
+                              'image/owl_book.png', // 引用專案插圖
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          // 書名 (現在已在邊框內)
+                          Text(
+                            item['title'] ?? '書籍',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4f000b),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(item['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(4)),
-                    child: Text('推薦書籍', style: TextStyle(fontSize: 10, color: Colors.amber.shade800)),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
-          );
-        },
+        ],
       ),
     );
   }
-
   // 3. 精選文章 (直向列表)
+// 3. 精選文章 (直向列表，符合圖1樣式)
   Widget _buildArticlesSection() {
-final rawArticles = _apiData?['articles'] as List?;
+    final rawArticles = _apiData?['articles'] as List?;
     if (rawArticles == null || rawArticles.isEmpty) {
       return const Text('暫無文章推薦', style: TextStyle(color: Colors.grey));
     }
 
-    // 🔥 核心過濾邏輯
+    // 過濾邏輯保持不變
     final displayArticles = rawArticles.where((item) {
       final tags = List<String>.from(item['tags'] ?? []);
-      
-      // 狀況 A: 這是一篇發燒文章 (#Event_Fever)
-      if (tags.contains('#Event_Fever')) {
-        // 只有當體溫 > 38.0 時才顯示，否則隱藏
-        return _latestTemp != null && _latestTemp! > 38.0;
-      }
-
-      // 狀況 B: 這是一篇低體溫文章 (#Event_LowTemp)
-      if (tags.contains('#Event_LowTemp')) {
-        // 只有當體溫 < 35.0 時才顯示，否則隱藏
-        return _latestTemp != null && _latestTemp! < 35.0;
-      }
-      if (tags.contains('#Ctx_FluSeason')) {
-        // 只有當 API 說現在是流感高峰期 (flu_warning == true) 才顯示
-        return _alertSummary?['flu_warning'] == true;
-      }
-      if (tags.contains('#Ctx_Cold')) {
-        // 如果抓不到氣溫(例如沒開定位)，預設不顯示，避免誤判
-        return _weatherTemp != null && _weatherTemp! < 16.0;
-      }
-      if (tags.contains('#Ctx_Hot')) {
-        return _weatherTemp != null && _weatherTemp! > 30.0;
-      }
-      // 狀況 C: 其他普通文章 (沒有這兩個標籤的)
-      // 總是顯示 (或者你要加入其他邏輯)
+      if (tags.contains('#Event_Fever')) return _latestTemp != null && _latestTemp! > 38.0;
+      if (tags.contains('#Event_LowTemp')) return _latestTemp != null && _latestTemp! < 35.0;
+      if (tags.contains('#Ctx_FluSeason')) return _alertSummary?['flu_warning'] == true;
+      if (tags.contains('#Ctx_Cold')) return _weatherTemp != null && _weatherTemp! < 16.0;
+      if (tags.contains('#Ctx_Hot')) return _weatherTemp != null && _weatherTemp! > 30.0;
       return true;
     }).toList();
 
-    // 如果過濾完沒剩下文章
     if (displayArticles.isEmpty) {
-       return const Text('目前狀況良好，無緊急推薦文章', style: TextStyle(color: Colors.grey));
+      return const Text('目前狀況良好，無緊急推薦文章', style: TextStyle(color: Colors.grey));
     }
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: displayArticles.length,
-      separatorBuilder: (c, i) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final item = displayArticles[index];
-        final title = item['title'] ?? '無標題';
-        final content = item['content'] ?? '無內容';
-        final tags = item['tags'] != null ? List<String>.from(item['tags']) : [];
-
-        // 下面這段維持原本的 UI 渲染邏輯
-        Color bgColor = Colors.blue.shade50;
-        IconData icon = Icons.article;
-        
-        // 為了讓緊急狀況更明顯，我們可以加強顏色
-        if (tags.toString().contains('Fever')) {
-          bgColor = Colors.red.shade100; // 發燒底色深一點
-          icon = Icons.local_fire_department; // 換成火的圖示
-        } else if (tags.toString().contains('LowTemp')) {
-          bgColor = Colors.cyan.shade100;
-          icon = Icons.ac_unit; // 雪花圖示
-        } else if (tags.toString().contains('FluSeason')) {
-          bgColor = Colors.orange.shade100;
-          icon = Icons.masks; // 或是 Icons.medical_services
-        }
-
-        return GestureDetector(
-          onTap: () => _showDetailDialog(
-            item['title'] ?? '', 
-            item['content'] ?? item['description'] ?? '', 
-            url: item['source_url'] // 傳入 URL
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: bgColor == Colors.red.shade100 ? Colors.red : Colors.grey.shade100), // 發燒加紅框
-              boxShadow: [BoxShadow(color: Colors.grey.shade100, blurRadius: 5, offset: const Offset(0, 2))],
+    // 橘色大外框容器
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF5EA), // 淺橘色背景
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFF8C00), width: 2), // 深橘色外框
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 內部標題
+          const Text(
+            '精選衛教文章',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF4A0E0E), // 深褐色
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
-                  child: Icon(icon, color: Colors.black87, size: 24),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          const SizedBox(height: 16),
+
+          // 文章列表
+          ListView.separated(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: displayArticles.length,
+            separatorBuilder: (c, i) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final item = displayArticles[index];
+              return GestureDetector(
+                onTap: () => _showDetailDialog(item['title'], item['content'], url: item['source_url'], category: '精選衛教文章'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF8C00), // 橘色背景卡片
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (tags.isNotEmpty)
-                        Text(tags.first, style: TextStyle(fontSize: 10, color: Colors.grey.shade600)), 
-                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      const SizedBox(height: 4),
-                      Text(content, style: const TextStyle(fontSize: 13, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Expanded(
+                        child: Text(
+                          item['title'] ?? '文章',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4A0E0E), // 深褐色文字
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Text(
+                        '>>',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4A0E0E),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                 const Icon(Icons.chevron_right, color: Colors.grey),
-              ],
-            ),
+              );
+            },
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -999,11 +1101,41 @@ final rawArticles = _apiData?['articles'] as List?;
             ),
           ),
           TextButton(
-            onPressed: () => _showDetailDialog('猛長期護理', '猛長期通常持續 2-7 天，寶寶會頻繁討奶，請按需餵養。情緒方面請多給予安撫與抱抱。'),
+            onPressed: () => _showDetailDialog('猛長期護理', '猛長期內容...', category: '生長趨勢分析'),
             child: const Text('如何安撫'),
           ),
         ],
       ),
     );
   }
+}
+// 自定義裁剪器：在兩側中間各挖掉一個半圓
+class TicketClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    double radius = 12.0; // 挖掉半圓的半徑
+    double vOffset = 120.0; // 缺口垂直位置，可根據標題高度調整
+
+    path.lineTo(0, vOffset - radius);
+    path.arcToPoint(
+      Offset(0, vOffset + radius),
+      radius: Radius.circular(radius),
+      clockwise: true,
+    );
+    path.lineTo(0, size.height);
+    path.lineTo(size.width, size.height);
+    path.lineTo(size.width, vOffset + radius);
+    path.arcToPoint(
+      Offset(size.width, vOffset - radius),
+      radius: Radius.circular(radius),
+      clockwise: true,
+    );
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
