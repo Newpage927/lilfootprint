@@ -45,102 +45,184 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('歷史趨勢')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _allRecords.isEmpty
-              ? const Center(child: Text('目前沒有紀錄'))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      // 1. 體溫圖表卡片
-                      _buildChartCard(
-                        title: '體溫變化',
-                        icon: Icons.thermostat,
-                        color: Colors.redAccent,
-                        type: 'health_temp',
-                        chart: _buildTempChart(),
+      // 1. 移除原本的 AppBar
+      backgroundColor: Colors.transparent, 
+      body: Stack(
+        children: [
+          // 2. 背景設定 (格紋與頂部裝飾)
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('image/background.png'),
+                repeat: ImageRepeat.repeat,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Image.asset(
+              'image/bg1.png', 
+              fit: BoxFit.fitWidth,
+            ),
+          ),
+
+          // 3. 主要內容區塊
+          SafeArea(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : CustomScrollView(
+                    slivers: [
+                      // 大標題區塊：模仿 RecordsScreen 樣式
+                      SliverToBoxAdapter(
+                        child: Container(
+                          padding: const EdgeInsets.only(top: 40, left: 24, bottom: 20),
+                          child: const Text(
+                            '歷史趨勢分析',
+                            style: TextStyle(
+                              fontSize: 32, 
+                              fontWeight: FontWeight.bold, 
+                              color: Color(0xFF4F000B),
+                            ),
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      
-                      // 2. 成長曲線卡片 (體重)
-                      _buildChartCard(
-                        title: '體重成長',
-                        icon: Icons.straighten,
-                        color: Colors.green,
-                        type: 'growth_body',
-                        chart: _buildWeightChart(),
+
+                      // 圖表列表
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            _buildChartCard(
+                              title: '體溫變化',
+                              icon: Icons.thermostat,
+                              color: Colors.redAccent,
+                              type: 'health_temp',
+                              chart: _buildTempChart(),
+                            ),
+                            const SizedBox(height: 20),
+                            _buildChartCard(
+                              title: '體重成長',
+                              icon: Icons.straighten,
+                              color: Colors.green,
+                              type: 'growth_body',
+                              chart: _buildWeightChart(),
+                            ),
+                            const SizedBox(height: 20),
+                            _buildChartCard(
+                              title: '睡眠時數',
+                              icon: Icons.bed,
+                              color: Colors.indigo,
+                              type: 'routine_sleep',
+                              chart: _buildSleepChart(),
+                            ),
+                            const SizedBox(height: 20),
+                            _buildOtherCard(),
+                            const SizedBox(height: 40),
+                          ]),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      
-                      // 3. 睡眠時數卡片
-                      _buildChartCard(
-                        title: '睡眠時數',
-                        icon: Icons.bed,
-                        color: Colors.indigo,
-                        type: 'routine_sleep',
-                        chart: _buildSleepChart(),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // 4. 其他紀錄 (疫苗、里程碑等)
-                      _buildOtherCard(),
                     ],
                   ),
-                ),
+          ),
+        ],
+      ),
     );
   }
 
   // --- UI 元件：圖表卡片外框 ---
-  Widget _buildChartCard({
+Widget _buildChartCard({
     required String title,
     required IconData icon,
     required Color color,
     required String type,
     required Widget chart,
   }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _navigateToDetail(title, type),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+    return Container(
+      // 1. 加上與專案風格一致的橘色大外框
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF5EA), // 淺米色背景
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFFFF8C00), // 橘色邊框
+          width: 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 2. 標題與「詳細記錄」按鈕列
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(icon, color: color),
-                      const SizedBox(width: 8),
-                      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    ],
+                  Icon(icon, color: const Color(0xFF4A0E0E)), // 使用深褐色圖示保持色調一致
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4A0E0E),
+                    ),
                   ),
-                  const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                 ],
               ),
-              const Divider(),
-              SizedBox(height: 200, child: chart), // 圖表高度
+              // 3. 右上角的「詳細記錄」文字按鈕
+              TextButton(
+                onPressed: () => _navigateToDetail(title, type),
+                style: TextButton.styleFrom(
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  '詳細記錄 >>',
+                  style: TextStyle(
+                    color: Color(0xFFFF8C00), // 橘色文字
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: 16),
+          
+          // 4. 圖表內容區塊 (移除了 Card，改用 Container 裝載以利排版)
+          Container(
+            height: 200,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: chart,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildOtherCard() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+Widget _buildOtherCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF5EA),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFF8C00), width: 2),
+      ),
       child: ListTile(
-        leading: const Icon(Icons.category, color: Colors.orange),
-        title: const Text('其他紀錄 (疫苗、里程碑)'),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () => _navigateToDetail('其他紀錄', 'others'),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: const Icon(Icons.category, color: Color(0xFF4A0E0E)),
+        title: const Text(
+          '其他紀錄 (疫苗、里程碑)',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A0E0E)),
+        ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFFF8C00)),
+        onTap: () => _navigateToDetail('其他', 'others'),
       ),
     );
   }
@@ -296,67 +378,114 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.title}紀錄')),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _recordsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('沒有資料'));
-          }
-
-          // 這裡進行過濾：只顯示符合 filterType 的資料
-          final allRecords = snapshot.data!;
-          final filteredRecords = widget.filterType == 'others'
-              ? allRecords.where((r) => !['health_temp', 'growth_body', 'routine_sleep'].contains(r['type'])).toList()
-              : allRecords.where((r) => r['type'] == widget.filterType).toList();
-
-          if (filteredRecords.isEmpty) {
-            return const Center(child: Text('此類別目前沒有紀錄'));
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: filteredRecords.length,
-            itemBuilder: (context, index) {
-              final record = filteredRecords[index];
-              final id = record['id'];
-              final value = record['value'];
-              final note = record['note'];
-              final timeString = record['time'];
-              
-              final DateTime dt = DateTime.parse(timeString);
-              final String formattedTime = "${dt.year}/${dt.month}/${dt.day} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
-
-              return Dismissible(
-                key: Key(id.toString()),
-                background: Container(color: Colors.red, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
-                onDismissed: (direction) => _deleteItem(id),
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.grey.shade200,
-                      child: Icon(_getIcon(widget.filterType), color: Colors.black54, size: 20),
-                    ),
-                    title: Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (note != null && note.isNotEmpty)
-                          Text(note, style: TextStyle(color: Colors.grey.shade600)),
-                        const SizedBox(height: 4),
-                        Text(formattedTime, style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-                      ],
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('image/background.png'),
+                fit: BoxFit.cover,
+                repeat: ImageRepeat.repeat,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: Image.asset('image/bg1.png', fit: BoxFit.fitWidth),
+          ),
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 返回按鈕
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, left: 10),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF4F000B)),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                // 與紀錄頁一致的大標題
+                Padding(
+                  padding: const EdgeInsets.only(left: 24, bottom: 20),
+                  child: Text(
+                    '${widget.title}紀錄',
+                    style: const TextStyle(
+                      fontSize: 32, 
+                      fontWeight: FontWeight.bold, 
+                      color: Color(0xFF4F000B),
                     ),
                   ),
                 ),
-              );
-            },
-          );
-        },
+                Expanded(
+                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _recordsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(child: Text('沒有資料'));
+                      }
+
+                      // 這裡進行過濾：只顯示符合 filterType 的資料
+                      final allRecords = snapshot.data!;
+                      final filteredRecords = widget.filterType == 'others'
+                          ? allRecords.where((r) => !['health_temp', 'growth_body', 'routine_sleep'].contains(r['type'])).toList()
+                          : allRecords.where((r) => r['type'] == widget.filterType).toList();
+
+                      if (filteredRecords.isEmpty) {
+                        return const Center(child: Text('此類別目前沒有紀錄'));
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredRecords.length,
+                        itemBuilder: (context, index) {
+                          final record = filteredRecords[index];
+                          final id = record['id'];
+                          final value = record['value'];
+                          final note = record['note'];
+                          final timeString = record['time'];
+                          
+                          final DateTime dt = DateTime.parse(timeString);
+                          final String formattedTime = "${dt.year}/${dt.month}/${dt.day} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
+
+                          return Dismissible(
+                            key: Key(id.toString()),
+                            background: Container(color: Colors.red, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
+                            onDismissed: (direction) => _deleteItem(id),
+                            child: Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: Colors.grey.shade200,
+                                  child: Icon(_getIcon(widget.filterType), color: Colors.black54, size: 20),
+                                ),
+                                title: Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (note != null && note.isNotEmpty)
+                                      Text(note, style: TextStyle(color: Colors.grey.shade600)),
+                                    const SizedBox(height: 4),
+                                    Text(formattedTime, style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  )
+                )
+        ]),
+          ),
+        ],
+        
+        
+        
       ),
     );
   }

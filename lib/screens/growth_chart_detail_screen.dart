@@ -5,7 +5,7 @@ import '../service/database_helper.dart';
 import '../service/growth_data_service.dart';
 
 class GrowthChartDetailScreen extends StatefulWidget {
-  final DateTime babyBirthDate; // 定義接收生日的變數
+  final DateTime babyBirthDate;
   const GrowthChartDetailScreen({super.key, required this.babyBirthDate});
 
   @override
@@ -27,7 +27,7 @@ class _GrowthChartDetailScreenState extends State<GrowthChartDetailScreen> {
     if (mounted) {
       setState(() {
         _growthRecords = allRecords.where((r) => r['type'] == 'growth_body').toList();
-        _growthRecords.sort((a, b) => a['time'].compareTo(b['time'])); // 時間由舊到新
+        _growthRecords.sort((a, b) => a['time'].compareTo(b['time']));
         _isLoading = false;
       });
     }
@@ -36,7 +36,6 @@ class _GrowthChartDetailScreenState extends State<GrowthChartDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 套用與主程式一致的背景裝飾
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -52,42 +51,38 @@ class _GrowthChartDetailScreenState extends State<GrowthChartDetailScreen> {
             children: [
               const SizedBox(height: 20),
               const Text(
-                '生長曲線',
+                '生長曲線分析',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF4A0E0E)),
               ),
-              const SizedBox(height: 20),
-              // 模擬圖片 2 的白色圓角大卡片
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
-                  ),
-                  child: _isLoading 
-                    ? const Center(child: CircularProgressIndicator())
-                    : Column(
-                        children: [
-                          // 圖表實作 (保留原有的 BMI 邏輯)
-                          Expanded(
-                            child: _growthRecords.isEmpty 
-                              ? const Center(child: Text('尚無身高體重紀錄'))
-                              : LineChart(_buildBmiChartData()), 
-                          ),
-                          const SizedBox(height: 20),
-                          // 回上頁按鈕
-                          TextButton.icon(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.arrow_left, color: Color(0xFF4A0E0E)),
-                            label: const Text('回上頁', style: TextStyle(fontSize: 18, color: Color(0xFF4A0E0E))),
-                          ),
-                        ],
-                      ),
+              // 使用 Spacer 讓中間的內容自動推到垂直中心
+              const Spacer(), 
+              
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
                 ),
+                child: _isLoading 
+                  ? const Center(child: CircularProgressIndicator())
+                  : AspectRatio(
+                      aspectRatio: 1.0, // 強制正方形
+                      child: _growthRecords.isEmpty 
+                        ? const Center(child: Text('目前尚無紀錄', style: TextStyle(color: Colors.grey)))
+                        : LineChart(_buildBmiChartData()),
+                    ),
               ),
-              const SizedBox(height: 40),
+
+              const Spacer(), // 下方也放一個 Spacer 達成完美置中
+
+              TextButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_left, color: Color(0xFF4A0E0E)),
+                label: const Text('回上頁', style: TextStyle(fontSize: 18, color: Color(0xFF4A0E0E))),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -95,85 +90,85 @@ class _GrowthChartDetailScreenState extends State<GrowthChartDetailScreen> {
     );
   }
 
-  // 這裡放入你原本在 HomeScreen 裡的 _buildBmiChartData 函式內容
-  final referenceData = GrowthDataService.boyBmiReference;
-  // 2. 修改圖表構建邏輯
   LineChartData _buildBmiChartData() {
-  List<FlSpot> babyBmiSpots = [];
-  
-  // 正則表達式解析 "身高:170cm, 體重:60kg"
-  final RegExp heightExp = RegExp(r'身高:([\d.]+)cm');
-  final RegExp weightExp = RegExp(r'體重:([\d.]+)kg');
-
-  for (var record in _growthRecords) {
-    final hMatch = heightExp.firstMatch(record['value']);
-    final wMatch = weightExp.firstMatch(record['value']);
+    final referenceData = GrowthDataService.boyBmiReference;
+    List<FlSpot> babyBmiSpots = [];
     
-    if (hMatch != null && wMatch != null) {
-      double heightM = (double.tryParse(hMatch.group(1)!) ?? 0) / 100; // 轉為公尺
-      double weightKg = double.tryParse(wMatch.group(1)!) ?? 0;
-      
-      if (heightM > 0) {
-        double bmi = weightKg / (heightM * heightM);
-        
-        // 計算該紀錄時的年齡 (歲)
-        DateTime recordTime = DateTime.parse(record['time']);
-        double ageInYears = recordTime.difference(widget.babyBirthDate).inDays / 365.0;
-        
-        babyBmiSpots.add(FlSpot(ageInYears, double.parse(bmi.toStringAsFixed(2))));
+    final RegExp heightExp = RegExp(r'身高:\s*([\d.]+)\s*cm');
+    final RegExp weightExp = RegExp(r'體重:\s*([\d.]+)\s*kg');
+
+    for (var record in _growthRecords) {
+      final hMatch = heightExp.firstMatch(record['value'] ?? "");
+      final wMatch = weightExp.firstMatch(record['value'] ?? "");
+      if (hMatch != null && wMatch != null) {
+        double heightM = (double.tryParse(hMatch.group(1)!) ?? 0) / 100;
+        double weightKg = double.tryParse(wMatch.group(1)!) ?? 0;
+        if (heightM > 0) {
+          double bmi = weightKg / (heightM * heightM);
+          DateTime recordTime = DateTime.parse(record['time']);
+          double ageInYears = recordTime.difference(widget.babyBirthDate).inDays / 365.0;
+          babyBmiSpots.add(FlSpot(ageInYears, double.parse(bmi.toStringAsFixed(2))));
+        }
       }
     }
+
+    // 動態計算邊界確保線條不跑出去
+    double maxX = 5.0;
+    for (var ref in referenceData) { if (ref['age'] > maxX) maxX = ref['age'].toDouble(); }
+    for (var spot in babyBmiSpots) { if (spot.x > maxX) maxX = spot.x; }
+    maxX = (maxX + 0.5).ceilToDouble();
+
+    double maxY = 22.0;
+    for (var ref in referenceData) { if (ref['p97'] > maxY) maxY = ref['p97'].toDouble(); }
+    for (var spot in babyBmiSpots) { if (spot.y > maxY) maxY = spot.y; }
+    maxY = (maxY + 2.0).ceilToDouble();
+
+    return LineChartData(
+      minX: 0,
+      maxX: maxX,
+      minY: 10,
+      maxY: maxY,
+      // 小格子網格設定
+      gridData: FlGridData(
+        show: true,
+        horizontalInterval: 1.0, 
+        verticalInterval: 0.5,   
+        getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1),
+        getDrawingVerticalLine: (value) => FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1),
+      ),
+      titlesData: FlTitlesData(
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true, 
+            interval: 1.0, 
+            getTitlesWidget: (value, meta) => Text('${value.toInt()}歲', style: const TextStyle(fontSize: 10)),
+          ),
+        ),
+        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 2.0, reservedSize: 30)),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      ),
+      lineBarsData: [
+        _buildRefLine(referenceData, 'p97', Colors.red),
+        _buildRefLine(referenceData, 'p50', Colors.green),
+        _buildRefLine(referenceData, 'p3', Colors.orange),
+        LineChartBarData(
+          spots: babyBmiSpots,
+          isCurved: true,
+          color: AppTheme.primaryColor,
+          barWidth: 4,
+          dotData: const FlDotData(show: true),
+        ),
+      ],
+    );
   }
 
-  return LineChartData(
-    minX: 0,
-    maxX: 5, // 設定顯示到 5 歲
-    minY: 10,
-    maxY: 22,
-    titlesData: FlTitlesData(
-      bottomTitles: AxisTitles(
-        axisNameWidget: const Text('年齡 (歲)', style: TextStyle(fontSize: 10)),
-        sideTitles: SideTitles(showTitles: true, reservedSize: 22),
-      ),
-      leftTitles: AxisTitles(
-        axisNameWidget: const Text('BMI', style: TextStyle(fontSize: 10)),
-        sideTitles: SideTitles(showTitles: true, reservedSize: 30),
-      ),
-      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-    ),
-    lineBarsData: [
-      // 背景參考線：第 97 百分位 (肥胖警示)
-      LineChartBarData(
-        spots: referenceData.map((e) => FlSpot(e['age'], e['p97'])).toList(),
-        color: Colors.red.withOpacity(0.3),
-        dashArray: [5, 5],
-        dotData: const FlDotData(show: false),
-      ),
-      // 背景參考線：第 50 百分位 (標準中位數)
-      LineChartBarData(
-        spots: referenceData.map((e) => FlSpot(e['age'], e['p50'])).toList(),
-        color: Colors.green.withOpacity(0.3),
-        dashArray: [5, 5],
-        dotData: const FlDotData(show: false),
-      ),
-      // 背景參考線：第 3 百分位 (過輕警示)
-      LineChartBarData(
-        spots: referenceData.map((e) => FlSpot(e['age'], e['p3'])).toList(),
-        color: Colors.orange.withOpacity(0.3),
-        dashArray: [5, 5],
-        dotData: const FlDotData(show: false),
-      ),
-      // 寶寶的實際 BMI 曲線
-      LineChartBarData(
-        spots: babyBmiSpots,
-        isCurved: true,
-        color: AppTheme.primaryColor,
-        barWidth: 4,
-        dotData: const FlDotData(show: true),
-        belowBarData: BarAreaData(show: true, color: AppTheme.primaryColor.withOpacity(0.1)),
-      ),
-    ],
-  );
-}
+  LineChartBarData _buildRefLine(List<Map<String, dynamic>> data, String key, Color color) {
+    return LineChartBarData(
+      spots: data.map((e) => FlSpot(e['age'].toDouble(), e[key].toDouble())).toList(),
+      color: color.withOpacity(0.4),
+      dashArray: [5, 5],
+      dotData: const FlDotData(show: false),
+    );
+  }
 }
