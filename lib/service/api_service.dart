@@ -25,6 +25,7 @@ class ApiService {
       throw Exception('連線錯誤: $e');
     }
   }
+
   // 在 ApiService 類別裡加入這個函式
   static Future<double?> fetchLocalTemperature(double lat, double lon) async {
     try {

@@ -76,7 +76,7 @@ class BmiChartScreen extends StatelessWidget {
     );
   }
 
-  // 核心圖表構建邏輯，移植自原本的生長紀錄解析方式
+  // 核心圖表構建邏輯
   Widget _buildGrowthChart({required bool isHeight}) {
     if (growthRecords.isEmpty) return const Center(child: Text('目前尚無資料'));
 
@@ -95,14 +95,13 @@ class BmiChartScreen extends StatelessWidget {
       
       if (val != null) {
         DateTime dt = DateTime.parse(record['time']);
-        // 計算相對於生日的年齡（歲），以精確對齊 PR 曲線
         double age = dt.difference(babyBirthDate).inDays / 365.0;
         userSpots.add(ChartData(age, val));
       }
     }
 
-    // 取得參考數據（此處示範如何從 Service 獲取）
-    final refData = GrowthDataService.boyBmiReference; 
+    // 1. 取得身高體重參考數據 (對應您更新後的 GrowthDataService)
+    final refData = GrowthDataService.boyGrowthReference; 
 
     return SfCartesianChart(
       primaryXAxis: NumericAxis(
@@ -112,37 +111,37 @@ class BmiChartScreen extends StatelessWidget {
       primaryYAxis: NumericAxis(
         title: AxisTitle(text: isHeight ? '身高 (cm)' : '體重 (kg)'),
       ),
-      legend: const Legend(isVisible: true, position: LegendPosition.bottom),
+      legend: const Legend(isVisible: true, position: LegendPosition.bottom), // 顯示圖例
       tooltipBehavior: TooltipBehavior(enable: true),
       series: <CartesianSeries>[
-        // PR97 參考線
+        // --- PR97 參考線 (紅色虛線) ---
         SplineSeries<Map<String, dynamic>, double>(
           name: 'PR97',
           dataSource: refData,
           xValueMapper: (data, _) => data['age'],
-          yValueMapper: (data, _) => isHeight ? (data['p97_h']) : data['p97_w'], // 需在 Service 定義對應欄位
+          yValueMapper: (data, _) => isHeight ? data['p97_h'] : data['p97_w'],
           dashArray: const [5, 5],
           color: Colors.red.withOpacity(0.3),
         ),
-        // PR50 參考線
+        // --- PR50 參考線 (綠色虛線) ---
         SplineSeries<Map<String, dynamic>, double>(
           name: 'PR50',
           dataSource: refData,
           xValueMapper: (data, _) => data['age'],
-          yValueMapper: (data, _) => isHeight ? (data['p50_h']) : data['p50_w'],
+          yValueMapper: (data, _) => isHeight ? data['p50_h'] : data['p50_w'],
           dashArray: const [5, 5],
           color: Colors.green.withOpacity(0.3),
         ),
-        // PR3 參考線
+        // --- PR3 參考線 (橘色虛線) ---
         SplineSeries<Map<String, dynamic>, double>(
           name: 'PR3',
           dataSource: refData,
           xValueMapper: (data, _) => data['age'],
-          yValueMapper: (data, _) => isHeight ? (data['p3_h']) : data['p3_w'],
+          yValueMapper: (data, _) => isHeight ? data['p3_h'] : data['p3_w'],
           dashArray: const [5, 5],
           color: Colors.orange.withOpacity(0.3),
         ),
-        // 用戶實際曲線
+        // --- 寶寶實際曲線 (實線) ---
         SplineSeries<ChartData, double>(
           name: '寶寶紀錄',
           dataSource: userSpots,
