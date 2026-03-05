@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart'; // 新增
 import 'growth_chart_detail_screen.dart'; // 引入新檔案
+import '../service/growth_data_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,7 +24,6 @@ class _HomeScreenState extends State<HomeScreen> {
   double? _latestTemp;
   double? _weatherTemp;
   List<dynamic> _alerts = [];
-  List<dynamic> _growthAnalysisArticles = [];
   Map<String, dynamic>? _alertSummary;
 
   // 模擬原本的環境數據 (保留舊版型用)
@@ -198,10 +198,70 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
   }
+  // lib/screens/home_screen.dart 內部
+
+String _calculateGrowthTrend() {
+  if (_growthRecords.length < 2) return "normal";
+
+  // 1. 取得最新兩筆紀錄
+  final last = _growthRecords.last;
+  final prev = _growthRecords[_growthRecords.length - 2];
+
+  // 2. 解析數值 (身高、體重)
+  final RegExp heightExp = RegExp(r'身高:([\d.]+)');
+  final RegExp weightExp = RegExp(r'體重:([\d.]+)');
+
+  double? hLast = double.tryParse(heightExp.firstMatch(last['value'] ?? "")?.group(1) ?? "");
+  double? wLast = double.tryParse(weightExp.firstMatch(last['value'] ?? "")?.group(1) ?? "");
+  double? hPrev = double.tryParse(heightExp.firstMatch(prev['value'] ?? "")?.group(1) ?? "");
+  double? wPrev = double.tryParse(weightExp.firstMatch(prev['value'] ?? "")?.group(1) ?? "");
+
+  // 3. 計算時間差 (以月為單位)
+  DateTime timeLast = DateTime.parse(last['time']);
+  DateTime timePrev = DateTime.parse(prev['time']);
+  double monthDiff = timeLast.difference(timePrev).inDays / 30.44;
+
+  // 如果兩次紀錄時間太近（小於 0.2 個月），不進行斜率判斷以防誤差
+  if (monthDiff < 0.2) return "normal";
+
+  // 4. 取得參考數據進行百分位判斷 (stunt/over)
+  final refData = GrowthDataService.boyReference;
+  double ageInYears = _currentAgeMonths / 12.0;
+  
+  Map<String, dynamic>? closestRef;
+  double minDiff = double.infinity;
+  for (var ref in refData) {
+    double diff = (ref['age'] - ageInYears).abs();
+    if (diff < minDiff) {
+      minDiff = diff;
+      closestRef = ref;
+    }
+  }
+
+  // 優先判斷是否低於 P3 (遲緩) 或 高於 P97 (過重)
+  if (closestRef != null) {
+    if (hLast != null && hLast < (closestRef['p3_h'] ?? 0)) return "stunt";
+    if (wLast != null && wLast > (closestRef['p97_w'] ?? 0)) return "over";
+  }
+
+  // 5. 實作斜率判斷邏輯 (猛長期 spurt)
+  // 判斷基準：若體重每月增長超過 1.2kg 或 身高每月增長超過 3.5cm (此為開發建議閾值)
+  if (wLast != null && wPrev != null) {
+    double weightGainRate = (wLast - wPrev) / monthDiff;
+    if (weightGainRate > 1.2) return "spurt"; 
+  }
+
+  if (hLast != null && hPrev != null) {
+    double heightGainRate = (hLast - hPrev) / monthDiff;
+    if (heightGainRate > 3.5) return "spurt";
+  }
+
+  return "normal";
+}
   // --- 新增：顯示詳情的彈窗 ---
 // 修改後的函式定義，增加 category 參數
 // lib/screens/home_screen.dart 內部的 _showDetailDialog 完整實作
-
+  
 void _showDetailDialog(String title, String content, {String? url, String category = '衛教資訊'}) {
   showGeneralDialog(
     context: context,
@@ -481,21 +541,21 @@ void _showDetailDialog(String title, String content, {String? url, String catego
 // lib/screens/home_screen.dart 內部的修改
 
 Widget _buildGrowthTrendSection() {
+  final String currentTrend = _calculateGrowthTrend();
+
   return Container(
-    // 加上橘色框框的外層裝飾
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: const Color(0xFFfff5ea), // 淺米色背景
+      color: const Color(0xFFFFF5EA), // 淺米色背景
       borderRadius: BorderRadius.circular(24),
       border: Border.all(
-        color: const Color(0xFFFF8C00), // 橘色邊框顏色
+        color: const Color(0xFFFF8C00), // 橘色邊框
         width: 2,
       ),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 區塊標題
         const Text(
           '生長趨勢分析',
           style: TextStyle(
@@ -506,7 +566,7 @@ Widget _buildGrowthTrendSection() {
         ),
         const SizedBox(height: 16),
         
-        // 1. 點擊查看生長曲線的入口卡片
+        // 1. 生長曲線入口卡片
         GestureDetector(
           onTap: () {
             Navigator.push(
@@ -514,7 +574,7 @@ Widget _buildGrowthTrendSection() {
               MaterialPageRoute(
                 builder: (context) => BmiChartScreen(
                   growthRecords: _growthRecords,
-                  babyBirthDate: _babyBirthDate, // 傳入寶寶生日
+                  babyBirthDate: _babyBirthDate,
                 ),
               ),
             );
@@ -523,7 +583,7 @@ Widget _buildGrowthTrendSection() {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5), // 淺灰色內容背景
+              color: const Color(0xFFF5F5F5),
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Row(
@@ -531,11 +591,7 @@ Widget _buildGrowthTrendSection() {
               children: [
                 Text(
                   '點擊查看生長曲線',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4A0E0E),
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A0E0E)),
                 ),
                 Text('>>', style: TextStyle(fontSize: 18, color: Color(0xFF4A0E0E))),
               ],
@@ -545,48 +601,68 @@ Widget _buildGrowthTrendSection() {
         
         const SizedBox(height: 12),
         
-        // 2. 猛長期建議卡片
-        if (_isGrowthSpurt)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8), // 白色半透明背景
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.trending_up, color: Color(0xFFFF8C00)),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '生長衝刺期 (猛長期)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFF4A0E0E),
+        // 2. 建議卡片：串接 API 內容
+        FutureBuilder<List<dynamic>>(
+          future: ApiService.fetchGrowthAnalysis(currentTrend),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(),
+              ));
+            }
+
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            final suggestion = snapshot.data!.first;
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    currentTrend == 'spurt' ? Icons.trending_up : 
+                    currentTrend == 'stunt' ? Icons.warning_amber : Icons.monitor_weight,
+                    color: const Color(0xFFFF8C00),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          suggestion['title'] ?? '生長建議',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4A0E0E)),
                         ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '最近生長曲線變陡，寶寶可能食慾大增或情緒不穩',
-                        style: TextStyle(fontSize: 13, color: Colors.black54),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          suggestion['content_snippet'] ?? '',
+                          style: const TextStyle(fontSize: 13, color: Colors.black54),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                TextButton(
-                  onPressed: () => _showDetailDialog(
-                    '猛長期護理',
-                    '猛長期通常持續 2-7 天，寶寶會頻繁討奶，請按需餵養。情緒方面請多給予安撫與抱抱。',
+                  TextButton(
+                    onPressed: () => _showDetailDialog(
+                      suggestion['title'], 
+                      suggestion['content'],
+                      category: '生長趨勢分析',
+                    ),
+                    child: const Text('查看建議', style: TextStyle(color: Color(0xFFFF8C00))),
                   ),
-                  child: const Text('如何安撫', style: TextStyle(color: Color(0xFFFF8C00))),
-                ),
-              ],
-            ),
-          ),
+                ],
+              ),
+            );
+          },
+        ),
       ],
     ),
   );
