@@ -66,20 +66,10 @@ class ApiService {
   }
   static Future<List<dynamic>> fetchGrowthAnalysis(String trend) async {
     final uri = Uri.parse('$baseUrl/api/growth_analysis?trend=$trend');
-    
-    try {
-      final response = await http.get(uri);
-
-      if (response.statusCode == 200) {
-        // 使用 utf8.decode 防止中文亂碼
-        return json.decode(utf8.decode(response.bodyBytes));
-      } else {
-        print('Growth Analysis API Error: ${response.statusCode}');
-        return [];
-      }
-    } catch (e) {
-      print('Fetch Growth Analysis Error: $e');
-      return [];
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      return json.decode(utf8.decode(response.bodyBytes));
     }
+    return [];
   }
 }
