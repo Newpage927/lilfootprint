@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double? _latestTemp;
   double? _weatherTemp;
   List<dynamic> _alerts = [];
+  List<dynamic> _growthAnalysisArticles = [];
   Map<String, dynamic>? _alertSummary;
 
   // 模擬原本的環境數據 (保留舊版型用)
@@ -199,6 +200,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   // --- 新增：顯示詳情的彈窗 ---
 // 修改後的函式定義，增加 category 參數
+// lib/screens/home_screen.dart 內部的 _showDetailDialog 完整實作
+
 void _showDetailDialog(String title, String content, {String? url, String category = '衛教資訊'}) {
   showGeneralDialog(
     context: context,
@@ -213,68 +216,110 @@ void _showDetailDialog(String title, String content, {String? url, String catego
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 使用 ClipPath 達成左右挖空效果
+              // 1. 使用 ClipPath 達成票券缺口效果
               ClipPath(
                 clipper: TicketClipper(),
                 child: Container(
                   width: MediaQuery.of(context).size.width * 0.85,
+                  // 限制彈窗最大高度，防止長文章撐破螢幕
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.7,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE0E0E0),
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('文章類別：$category', style: const TextStyle(fontSize: 16, color: Color(0xFF4A0E0E), fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        Text(title, style: const TextStyle(fontSize: 18, color: Color(0xFF4A0E0E), fontWeight: FontWeight.bold)),
-                        
-                        // 虛線位置建議與 TicketClipper 的 vOffset 對齊
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 37), // 這裡的高度調整要對準缺口
-                          child: Row(
-                            children: List.generate(20, (index) => Expanded(
-                              child: Container(color: Colors.white, height: 2, margin: const EdgeInsets.symmetric(horizontal: 2)),
-                            )),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 2. 內容區域：包裹在 SingleChildScrollView 中以支援滑動
+                      Flexible(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '文章類別：$category',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Color(0xFF4A0E0E),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Color(0xFF4A0E0E),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              
+                              // 虛線裝飾 (需對準 TicketClipper 的 vOffset)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 37),
+                                child: Row(
+                                  children: List.generate(20, (index) => Expanded(
+                                    child: Container(
+                                      color: Colors.white,
+                                      height: 2,
+                                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                                    ),
+                                  )),
+                                ),
+                              ),
+                              
+                              // 文章內文
+                              Text(
+                                content,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Color(0xFF4A0E0E),
+                                  height: 1.5,
+                                ),
+                              ),
+                              
+                              // 如果有 URL，顯示底部按鈕
+                              if (url != null && url.isNotEmpty) ...[
+                                const SizedBox(height: 20),
+                                const Divider(color: Colors.white, thickness: 2),
+                                const SizedBox(height: 10),
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    _openLink(url); // 呼叫原本的連結開啟邏輯
+                                  },
+                                  child: const Text(
+                                    '前往外部連結 >>',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Color(0xFF4A0E0E),
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                        
-                        //const Text('文章內容', style: TextStyle(fontSize: 18, color: Color(0xFF4A0E0E), fontWeight: FontWeight.bold)),
-                        //const SizedBox(height: 12),
-                        Text(content, style: const TextStyle(fontSize: 16, color: Color(0xFF4A0E0E), height: 1.5)),
-                        
-                        if (url != null && url.isNotEmpty) ...[
-                          // 第二條虛線
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            child: Row(
-                              children: List.generate(20, (index) => Expanded(
-                                child: Container(color: Colors.white, height: 2, margin: const EdgeInsets.symmetric(horizontal: 2)),
-                              )),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              _openLink(url);
-                            },
-                            child: const Text('前往外部連結', style: TextStyle(fontSize: 18, color: Color(0xFF4A0E0E), fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              // 下方的圓形關閉按鈕
+              // 3. 圓形關閉按鈕
               GestureDetector(
                 onTap: () => Navigator.pop(ctx),
                 child: Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
                   child: const Icon(Icons.close, color: Color(0xFF4A0E0E), size: 30),
                 ),
               ),
@@ -467,8 +512,9 @@ Widget _buildGrowthTrendSection() {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => GrowthChartDetailScreen(
-                  babyBirthDate: _babyBirthDate,
+                builder: (context) => BmiChartScreen(
+                  growthRecords: _growthRecords,
+                  babyBirthDate: _babyBirthDate, // 傳入寶寶生日
                 ),
               ),
             );

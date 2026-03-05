@@ -11,7 +11,7 @@ import '../local/place_cache_db.dart';
 import '../platform_exceptions.dart';
 
 // API defaults (override via PlacesMapView parameters when embedding)
-const String defaultApiBase = 'http://35.194.206.11';
+const String defaultApiBase = 'https://map-api-jx0p.onrender.com';
 const String defaultApiKey = 'Hello';
 
 // Place data model

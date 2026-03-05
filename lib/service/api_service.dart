@@ -64,4 +64,12 @@ class ApiService {
       return {};
     }
   }
+  static Future<List<dynamic>> fetchGrowthAnalysis(String trend) async {
+    final uri = Uri.parse('$baseUrl/api/growth_analysis?trend=$trend');
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      return json.decode(utf8.decode(response.bodyBytes));
+    }
+    return [];
+  }
 }
