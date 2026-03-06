@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart'; // 新增
 import 'growth_chart_detail_screen.dart'; // 引入新檔案
+import '../service/growth_data_service.dart'; // 引入生長參考數據服務
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -79,25 +80,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // 3. 讀取生長紀錄 (身高體重)
     final allRecords = await DatabaseHelper.instance.readAllRecords();
-    setState(() {
-      _latestTemp = temp;
-      _growthRecords = allRecords.where((r) => r['type'] == 'growth_body').toList();
-      // 依時間排序：舊 -> 新
-      _growthRecords.sort((a, b) => a['time'].compareTo(b['time']));
-    });
-    setState(() {
-      _latestTemp = temp; 
-    });
-    // Debug 檢查用
-    print("目前最新體溫: $_latestTemp");
-    // 初始化天氣
-    _initWeather();
+    if (mounted) {
+      setState(() {
+        _latestTemp = temp;
+        _growthRecords = allRecords.where((r) => r['type'] == 'growth_body').toList();
+        _growthRecords.sort((a, b) => a['time'].compareTo(b['time']));
+      });
+      // Debug 檢查用
+      print("目前最新體溫: $_latestTemp");
+      // 初始化天氣
+      _initWeather();
 
-    setState(() {
-      _latestTemp = temp;
-    });
-    // 3. 呼叫 API
-    _fetchData();
+      setState(() {
+        _latestTemp = temp;
+      });
+      // 3. 呼叫 API
+      await _fetchData();
+    }
   }
   Future<void> _initWeather() async {
     try {
@@ -130,40 +129,75 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('baby_birth_date', date.toIso8601String());
   }
-  Future<void> _fetchData() async {
-    setState(() {
-      _isLoading = true;
-    });
+  // lib/screens/home_screen.dart 內部的 _fetchData 修改
 
-    try {
-      final double ageInYears = _currentAgeMonths / 12.0;
+Future<void> _fetchData() async {
+  setState(() => _isLoading = true);
 
-      final results = await Future.wait([
-        ApiService.fetchRecommendations(ageInYears), 
-        ApiService.fetchAlerts(), 
-      ]);
+  try {
+    final double ageInYears = _currentAgeMonths / 12.0;
 
-      if (mounted) {
-        setState(() {
-          _apiData = results[0];
-          
-          // 解析新的 Alerts 結構
-          final alertResponse = results[1];
-          _alertSummary = alertResponse['status_summary']; // 存取 summary
-          _alerts = (alertResponse['data'] as List<dynamic>?) ?? []; // 存取 data
-          
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          print("API Error: $e");
-        });
+    // --- 1. 核心修改：從本地紀錄中「讀值」並判斷趨勢 ---
+    String currentTrend = "normal"; // 預設正常
+    
+    if (_growthRecords.isNotEmpty) {
+      // 取得最新一筆紀錄
+      final latest = _growthRecords.last;
+      final valueStr = latest['value'] ?? "";
+      
+      // 解析體重數值 (kg)
+      final RegExp weightExp = RegExp(r'體重:([\d.]+)kg');
+      final match = weightExp.firstMatch(valueStr);
+      
+      if (match != null) {
+        double currentWeight = double.tryParse(match.group(1)!) ?? 0;
+        
+        // 取得參考數據 (以男童為例，您可根據性別邏輯調整)
+        // 這裡簡單比對當前年齡對應的 p3 和 p97
+        final ref = GrowthDataService.boyGrowthReference.firstWhere(
+          (r) => r['age'] >= ageInYears, 
+          orElse: () => GrowthDataService.boyGrowthReference.last
+        );
+
+        if (currentWeight < ref['p3_w']) {
+          currentTrend = "stunt"; // 生長偏緩
+        } else if (currentWeight > ref['p97_w']) {
+          currentTrend = "over";  // 生長超標
+        } else if (_isGrowthSpurt) {
+          currentTrend = "spurt"; // 猛長期
+        }
       }
     }
+
+    // --- 2. 帶著讀到的「趨勢值」呼叫 API ---
+    final results = await Future.wait([
+      ApiService.fetchRecommendations(ageInYears), 
+      ApiService.fetchAlerts(), 
+      ApiService.fetchGrowthAnalysis(currentTrend),
+    ]);
+
+    if (mounted) {
+      setState(() {
+        _apiData = results[0] as Map<String, dynamic>?;
+        
+        final alertResponse = results[1] as Map<String, dynamic>?;
+        if (alertResponse != null) {
+          _alertSummary = alertResponse['status_summary'] as Map<String, dynamic>?;
+          _alerts = (alertResponse['data'] as List<dynamic>?) ?? [];
+        }
+
+        _growthAnalysisArticles = (results[2] as List<dynamic>?) ?? [];
+        _growthTrend = currentTrend; // 更新狀態以改變 UI 顏色
+        _isLoading = false;
+      });
+    }
+  } catch (e) {
+    if (mounted) {
+      setState(() => _isLoading = false);
+      print("讀值或 API 錯誤: $e");
+    }
   }
+}
 
   Future<void> _selectBirthDate() async {
     final DateTime? picked = await showDatePicker(
@@ -549,8 +583,8 @@ Widget _buildGrowthTrendSection() {
               padding: const EdgeInsets.only(bottom: 12.0),
               child: GestureDetector(
                 onTap: () => _showDetailDialog(
-                  article['title'] ?? '生長建議',
-                  article['content'] ?? '',
+                  article['title'] ,
+                  article['content'],
                   url: article['source_url'],
                   category: '生長建議',
                 ),

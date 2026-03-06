@@ -18,7 +18,7 @@ class ChatMessage {
 }
 
 class AiChatScreenState extends State<AiChatScreen> {
-  static const String _apiKey = "";
+  static const String _apiKey = "1";
 
   final List<ChatMessage> _messages = [];
   List<String> _suggestQuestions = [];
@@ -274,7 +274,7 @@ User Question:
     try {
       final response = await Gemini.instance.prompt(
         parts: [Part.text("$precautions$userInput")],
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
       );
 
       final geminiOutput = response?.output ?? "發生錯誤，請稍後再試或連繫客服人員";
@@ -295,7 +295,6 @@ User Question:
       setState(() {
         _messages.add(ChatMessage(textContent: answer, user: false));
         _scrollToBottom();
-        //_suggestQuestions = suggestions.take(4).toList();
       });
     } catch (error) {
       debugPrint("$error");
@@ -359,7 +358,6 @@ User Question:
     }
   }
 
-  // 還沒弄懂
   Widget _showSuggestQuestions() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
@@ -393,6 +391,4 @@ User Question:
       ),
     );
   }
-
-  // 代辦: 參考資料來源連結
 }

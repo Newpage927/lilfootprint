@@ -65,12 +65,28 @@ class ApiService {
       return {};
     }
   }
+// lib/service/api_service.dart
+
   static Future<List<dynamic>> fetchGrowthAnalysis(String trend) async {
     final uri = Uri.parse('$baseUrl/api/growth_analysis?trend=$trend');
-    final response = await http.get(uri);
-    if (response.statusCode == 200) {
-      return json.decode(utf8.decode(response.bodyBytes));
+    try {
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        final decoded = json.decode(utf8.decode(response.bodyBytes));
+
+        // ⭐ 核心修正：
+        // 根據您提供的 JSON，資料在 'advice' 鍵值中
+        if (decoded is Map && decoded.containsKey('advice')) {
+          return decoded['advice'] as List<dynamic>;
+        } 
+        // 保留原本的相容性判斷
+        else if (decoded is List) {
+          return decoded;
+        }
+      }
+    } catch (e) {
+      print('Growth Analysis API Error: $e');
     }
-    return [];
+    return []; // 失敗回傳空列表，不影響 UI 運行
   }
 }
