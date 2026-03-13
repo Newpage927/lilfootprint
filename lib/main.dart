@@ -28,8 +28,8 @@ class ParentingApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [
-        Locale('en'), // 英文
-        Locale('zh'), // 中文
+        Locale('en'),
+        Locale('zh'),
       ],
     );
   }
@@ -45,7 +45,6 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _currentIndex = 0;
 
-  // 這裡定義新的 4 個頁面
   final List<Widget> _pages = [
     const HomeScreen(),   // 1. 個人化推薦
     const RecordsScreen(),// 2. 育兒紀錄 + 照片
@@ -61,10 +60,9 @@ class _MainScaffoldState extends State<MainScaffold> {
     return Container(
       decoration: const BoxDecoration(
       image: DecorationImage(
-        image: AssetImage('image/background.png'), // 您的背景圖路徑
-        fit: BoxFit.cover, // 填滿整個螢幕
-        repeat: ImageRepeat.repeat, // 圖片重複填充，適合斜紋背景
-        // 如果是圖片 3 那種斜紋，可以使用 repeat: ImageRepeat.repeat
+        image: AssetImage('image/background.png'),
+        fit: BoxFit.cover,
+        repeat: ImageRepeat.repeat,
       ),
     ),
     child:Scaffold(
@@ -74,25 +72,21 @@ class _MainScaffoldState extends State<MainScaffold> {
       ),
       bottomNavigationBar: Stack(
         alignment: Alignment.bottomCenter,
-        clipBehavior: Clip.none, // 允許圓弧超出邊界
+        clipBehavior: Clip.none,
         children: [
-          // 1. 靜態切換的半圓形
-          // 將 AnimatedPositioned 改為 Positioned 就不會有滑動動畫
           Positioned(
-            // 直接計算當前選中 index 的位置
             left: (itemWidth * _currentIndex) + (itemWidth / 2) - 30, 
-            top: -15, // 向上突起高度
+            top: -15,
             child: Container(
               width: 60,
               height: 60,
               decoration: const BoxDecoration(
-                color: Color(0xff4F000B), // 顏色與導覽列一致
+                color: Color(0xff4F000B),
                 shape: BoxShape.circle,
               ),
             ),
           ),
           
-          // 2. 原本的 NavigationBar
           NavigationBar(
             selectedIndex: _currentIndex,
             onDestinationSelected: (int index) {
@@ -101,7 +95,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               });
             },
             backgroundColor: const Color(0xff4F000B),
-            indicatorColor: Colors.transparent, // 隱藏預設指示器
+            indicatorColor: Colors.transparent,
             surfaceTintColor: Colors.transparent,
             destinations: const [
               NavigationDestination(

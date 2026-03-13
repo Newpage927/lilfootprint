@@ -18,7 +18,7 @@ class ChatMessage {
 }
 
 class AiChatScreenState extends State<AiChatScreen> {
-  static const String _apiKey = "1";
+  static const String _apiKey = "hello";
 
   final List<ChatMessage> _messages = [];
   List<String> _suggestQuestions = [];

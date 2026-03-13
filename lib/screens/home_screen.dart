@@ -4,9 +4,9 @@ import '../service/api_service.dart';
 import '../service/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:geolocator/geolocator.dart'; // 新增
-import 'growth_chart_detail_screen.dart'; // 引入新檔案
-import '../service/growth_data_service.dart'; // 引入生長參考數據服務
+import 'package:geolocator/geolocator.dart';
+import 'growth_chart_detail_screen.dart';
+import '../service/growth_data_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,7 +17,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   // --- 狀態變數 ---
-  DateTime _babyBirthDate = DateTime.now().subtract(const Duration(days: 165)); // 預設值 (如果讀取失敗會用這個)
+  DateTime _babyBirthDate = DateTime.now().subtract(const Duration(days: 165));
   
   bool _isLoading = false;
   Map<String, dynamic>? _apiData; 
@@ -26,10 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _alerts = [];
   List<dynamic> _growthAnalysisArticles = [];
   Map<String, dynamic>? _alertSummary;
-  String _growthTrend = "normal"; // 儲存目前的生長趨勢狀態
-  List<Map<String, dynamic>> _growthRecords = []; // 儲存本地生長紀錄
+  String _growthTrend = "normal";
+  List<Map<String, dynamic>> _growthRecords = [];
 
-  // 模擬原本的環境數據 (保留舊版型用)
   final bool _isGrowthSpurt = true;
   // 計算月齡
   double get _currentAgeMonths {
@@ -37,7 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final difference = now.difference(_babyBirthDate).inDays;
     return double.parse((difference / 30.0).toStringAsFixed(1));
   }
-  // 把它加在 _currentAgeMonths 下面
   String get _formattedAge {
     final now = DateTime.now();
     final difference = now.difference(_babyBirthDate).inDays;
@@ -64,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData(); // 統一包成一個函式比較整齊
+    _loadData();
   }
   // 統一讀取資料 (生日 + 體溫 + API)
   Future<void> _loadData() async {
@@ -75,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() { _babyBirthDate = DateTime.parse(savedDate); });
     }
 
-    // 2. 🔥 讀取最新體溫 (新增的邏輯)
+    // 2. 讀取最新體溫 (新增的邏輯)
     final temp = await DatabaseHelper.instance.getLatestTemperature();
 
     // 3. 讀取生長紀錄 (身高體重)
@@ -94,13 +92,11 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _latestTemp = temp;
       });
-      // 3. 呼叫 API
       await _fetchData();
     }
   }
   Future<void> _initWeather() async {
     try {
-      // 檢查權限 (簡單版)
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -109,10 +105,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // 取得目前位置
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low // 不需要太精準，省電
+        desiredAccuracy: LocationAccuracy.low
       );
 
-      // 呼叫剛剛寫好的 API
       final wTemp = await ApiService.fetchLocalTemperature(position.latitude, position.longitude);
       
       if (mounted && wTemp != null) {
@@ -129,7 +124,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('baby_birth_date', date.toIso8601String());
   }
-  // lib/screens/home_screen.dart 內部的 _fetchData 修改
 
 Future<void> _fetchData() async {
   setState(() => _isLoading = true);
@@ -137,7 +131,6 @@ Future<void> _fetchData() async {
   try {
     final double ageInYears = _currentAgeMonths / 12.0;
 
-    // --- 1. 核心修改：從本地紀錄中「讀值」並判斷趨勢 ---
     String currentTrend = "normal"; // 預設正常
     
     if (_growthRecords.isNotEmpty) {
@@ -152,8 +145,6 @@ Future<void> _fetchData() async {
       if (match != null) {
         double currentWeight = double.tryParse(match.group(1)!) ?? 0;
         
-        // 取得參考數據 (以男童為例，您可根據性別邏輯調整)
-        // 這裡簡單比對當前年齡對應的 p3 和 p97
         final ref = GrowthDataService.boyGrowthReference.firstWhere(
           (r) => r['age'] >= ageInYears, 
           orElse: () => GrowthDataService.boyGrowthReference.last
@@ -169,7 +160,6 @@ Future<void> _fetchData() async {
       }
     }
 
-    // --- 2. 帶著讀到的「趨勢值」呼叫 API ---
     final results = await Future.wait([
       ApiService.fetchRecommendations(ageInYears), 
       ApiService.fetchAlerts(), 
@@ -187,7 +177,7 @@ Future<void> _fetchData() async {
         }
 
         _growthAnalysisArticles = (results[2] as List<dynamic>?) ?? [];
-        _growthTrend = currentTrend; // 更新狀態以改變 UI 顏色
+        _growthTrend = currentTrend;
         _isLoading = false;
       });
     }
@@ -212,7 +202,6 @@ Future<void> _fetchData() async {
         _babyBirthDate = picked;
       });
       
-      // 🔥 4. 使用者選完後，立刻存檔
       _saveBirthDate(picked);
       
       _fetchData(); 
@@ -223,9 +212,7 @@ Future<void> _fetchData() async {
 
     final Uri url = Uri.parse(urlString);
     
-    // 嘗試開啟 (mode: LaunchMode.externalApplication 代表用手機的瀏覽器開啟，而不是在 App 內開)
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      // 如果開啟失敗 (例如網址錯誤)，顯示錯誤提示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('無法開啟連結: $urlString')),
@@ -233,9 +220,6 @@ Future<void> _fetchData() async {
       }
     }
   }
-  // --- 新增：顯示詳情的彈窗 ---
-// 修改後的函式定義，增加 category 參數
-// lib/screens/home_screen.dart 內部的 _showDetailDialog 完整實作
 
 void _showDetailDialog(String title, String content, {String? url, String category = '衛教資訊'}) {
   showGeneralDialog(
@@ -251,12 +235,10 @@ void _showDetailDialog(String title, String content, {String? url, String catego
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 1. 使用 ClipPath 達成票券缺口效果
               ClipPath(
                 clipper: TicketClipper(),
                 child: Container(
                   width: MediaQuery.of(context).size.width * 0.85,
-                  // 限制彈窗最大高度，防止長文章撐破螢幕
                   constraints: BoxConstraints(
                     maxHeight: MediaQuery.of(context).size.height * 0.7,
                   ),
@@ -267,7 +249,6 @@ void _showDetailDialog(String title, String content, {String? url, String catego
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // 2. 內容區域：包裹在 SingleChildScrollView 中以支援滑動
                       Flexible(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.all(24.0),
@@ -292,7 +273,6 @@ void _showDetailDialog(String title, String content, {String? url, String catego
                                 ),
                               ),
                               
-                              // 虛線裝飾 (需對準 TicketClipper 的 vOffset)
                               Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 37),
                                 child: Row(
@@ -306,7 +286,6 @@ void _showDetailDialog(String title, String content, {String? url, String catego
                                 ),
                               ),
                               
-                              // 文章內文
                               Text(
                                 content,
                                 style: const TextStyle(
@@ -316,7 +295,6 @@ void _showDetailDialog(String title, String content, {String? url, String catego
                                 ),
                               ),
                               
-                              // 如果有 URL，顯示底部按鈕
                               if (url != null && url.isNotEmpty) ...[
                                 const SizedBox(height: 20),
                                 const Divider(color: Colors.white, thickness: 2),
@@ -324,7 +302,7 @@ void _showDetailDialog(String title, String content, {String? url, String catego
                                 GestureDetector(
                                   onTap: () {
                                     Navigator.pop(ctx);
-                                    _openLink(url); // 呼叫原本的連結開啟邏輯
+                                    _openLink(url);
                                   },
                                   child: const Text(
                                     '前往外部連結 >>',
@@ -346,7 +324,6 @@ void _showDetailDialog(String title, String content, {String? url, String catego
                 ),
               ),
               const SizedBox(height: 24),
-              // 3. 圓形關閉按鈕
               GestureDetector(
                 onTap: () => Navigator.pop(ctx),
                 child: Container(
@@ -369,7 +346,7 @@ void _showDetailDialog(String title, String content, {String? url, String catego
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // 讓背景圖透過來
+      backgroundColor: Colors.transparent,
       body: _isLoading 
           ? const Center(child: CircularProgressIndicator()) 
           : SingleChildScrollView(
@@ -386,28 +363,23 @@ void _showDetailDialog(String title, String content, {String? url, String catego
                     children: [
                       const SizedBox(height: 20),
                       
-                      // 5. 實作圖片 1 下方的「今日環境與警示」卡片
                       _buildTimeSensitiveSection(),
                       
                       const SizedBox(height: 24),
 
-                      // 6. 生長趨勢分析 (圖片 2 樣式)
                       const SizedBox(height: 10),
                       _buildGrowthTrendSection(), 
 
                       const SizedBox(height: 24),
-
-                      // 7. 適齡繪本推薦 (圖片 2 樣式)
                       
                       _buildBooksSection(), 
 
                       const SizedBox(height: 24),
 
-                      // 8. 精選衛教文章 (圖片 2 樣式)
                       const SizedBox(height: 10),
                       _buildArticlesSection(),
                       
-                      const SizedBox(height: 40), // 留白避免被導覽列遮住
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
@@ -420,21 +392,20 @@ void _showDetailDialog(String title, String content, {String? url, String catego
   return Stack(
     alignment: Alignment.topCenter,
     children: [
-      // 1. 頂部橘色圓弧背景
       Container(
         height: 200,
         decoration: const BoxDecoration(
-          color: Color(0xFFFF8C00), // 圖片中的主橘色
+          color: Color(0xFFFF8C00),
           borderRadius: BorderRadius.vertical(
-            bottom: Radius.elliptical(250, 125), // 達成下凹的圓弧效果
+            bottom: Radius.elliptical(250, 125),
           ),
         ),
       ),
       
-      // 2. 頭像與月齡資訊內容
+      //  頭像與月齡資訊內容
       Column(
         children: [
-          const SizedBox(height: 100), // 往下偏移讓頭像橫跨背景邊界
+          const SizedBox(height: 100),
           
           // 圓形頭像區塊
           Container(
@@ -449,14 +420,13 @@ void _showDetailDialog(String title, String content, {String? url, String catego
             child: const CircleAvatar(
               radius: 65,
               backgroundColor: Color(0xFFFDEFD5), // 頭像背景淡色
-              // 請確保 assets 中有此圖片並在 pubspec.yaml 註冊
               backgroundImage: AssetImage('image/baby_owl.png'), 
             ),
           ),
           
           const SizedBox(height: 20),
           
-          // 3. 橘色月齡標籤按鈕
+          // 橘色月齡標籤按鈕
           GestureDetector(
             onTap: () => _selectBirthDate(), // 觸發原本的日期選擇功能
             child: Stack(
@@ -465,7 +435,7 @@ void _showDetailDialog(String title, String content, {String? url, String catego
               children: [
                 // 主要橘色長橢圓標籤
                 Container(
-                  margin: const EdgeInsets.only(top: 15), // 為上方蛋糕圖示留空間
+                  margin: const EdgeInsets.only(top: 15),
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF8C00),
@@ -512,11 +482,9 @@ void _showDetailDialog(String title, String content, {String? url, String catego
     ],
   );
 }
-  // --- UI 元件區塊 ---
-// lib/screens/home_screen.dart 內部的修改
 
 Widget _buildGrowthTrendSection() {
-  // 1. 根據狀態決定主題顏色
+  // 根據狀態決定主題顏色
   Color themeColor = const Color(0xFFFF8C00); // 預設橘色
   String trendTitle = "成長進度良好";
 
@@ -571,7 +539,7 @@ Widget _buildGrowthTrendSection() {
           ),
         ),
 
-        // 2. 串接 API 文章列表 (如果不是 normal 且有文章)
+        // 串接 API 文章列表 (如果不是 normal 且有文章)
         if (_growthTrend != "normal" && _growthAnalysisArticles.isNotEmpty) ...[
           const SizedBox(height: 16),
           const Divider(),
@@ -623,13 +591,11 @@ Widget _buildGrowthTrendSection() {
   );
 }
   
-
-  // 1. 即時快訊 (保留舊版邏輯)
-  // 1. 即時快訊區塊 (整合：流感警示 + 即時氣溫 + API 警示)
+  // 即時快訊區塊 (整合：流感警示 + 即時氣溫 + API 警示)
   Widget _buildTimeSensitiveSection() {
     final List<Widget> cards = [];
 
-    // --- (1) 氣溫卡片 (維持原本文字排版，僅換橘色背景) ---
+    // 氣溫卡片
     if (_weatherTemp != null) {
       cards.add(_buildOrangeInfoCard(
         child: Column(
@@ -659,7 +625,7 @@ Widget _buildGrowthTrendSection() {
       ));
     }
 
-    // --- (2) 流感警示卡片 ---
+    //  流感警示卡片
     if (_alertSummary?['flu_warning'] == true) {
       cards.add(_buildOrangeInfoCard(
         onTap: () => _showDetailDialog('流感疫情警報', _alertSummary?['message'] ?? '請注意防疫',category: '流感疫情警報'),
@@ -687,7 +653,7 @@ Widget _buildGrowthTrendSection() {
       ));
     }
 
-    // --- (3) 一般 API 警示卡片 (維持原本左右排版邏輯) ---
+    //  一般 API 警示卡片 (維持原本左右排版邏輯)
     for (var alert in _alerts) {
       final String source = alert['source'] ?? '通知';
       final String title = alert['title'] ?? '無標題';
@@ -733,13 +699,13 @@ Widget _buildGrowthTrendSection() {
           ),
           const SizedBox(height: 16),
           SizedBox(
-            height: 150, // 增加高度以容納原本的文字排版
+            height: 150,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: cards.length,
               separatorBuilder: (context, index) => const SizedBox(width: 12),
               itemBuilder: (context, index) => SizedBox(
-                width: 180, // 維持原本卡片寬度
+                width: 180,
                 child: cards[index],
               ),
             ),
@@ -749,7 +715,7 @@ Widget _buildGrowthTrendSection() {
     );
   }
 
-  // 輔助元件：橘色圓角卡片
+  // 輔助元件
   Widget _buildOrangeInfoCard({required Widget child, VoidCallback? onTap}) {
     return GestureDetector(
       onTap: onTap,
@@ -764,7 +730,7 @@ Widget _buildGrowthTrendSection() {
     );
   }
 
-  // --- 子元件：流感卡片 ---
+  // 子元件：流感卡片
   Widget _buildFluCard() {
     return Container(
       width: 280,
@@ -811,7 +777,7 @@ Widget _buildGrowthTrendSection() {
     );
   }
 
-  // --- 子元件：氣溫卡片 (新增) ---
+  // 子元件：氣溫卡片
   Widget _buildWeatherCard(double temp) {
     // 根據溫度決定顏色與文字
     String statusText;
@@ -833,7 +799,7 @@ Widget _buildGrowthTrendSection() {
     }
 
     return Container(
-      width: 220, // 稍微窄一點
+      width: 220,
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -868,7 +834,7 @@ Widget _buildGrowthTrendSection() {
     );
   }
 
-  // --- 子元件：一般 Alert 卡片 (原本的邏輯) ---
+  // 子元件：一般 Alert 卡片
   Widget _buildNormalAlertCard(dynamic alert) {
     final String title = alert['title'] ?? '無標題';
     final String source = alert['source'] ?? '通知';
@@ -944,8 +910,7 @@ Widget _buildGrowthTrendSection() {
     );
   }
 
-  // 2. 適齡繪本 (新功能 - 橫向)
-// 2. 適齡繪本 (橫向滑動，符合圖1樣式)
+// 適齡繪本
   Widget _buildBooksSection() {
     final books = _apiData?['books'] as List?;
     
@@ -974,7 +939,7 @@ Widget _buildGrowthTrendSection() {
             const Text('目前無相關書籍推薦', style: TextStyle(color: Colors.grey))
           else
             SizedBox(
-              height: 190, // 稍微增加高度以容納拉長的方框
+              height: 190,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: books.length,
@@ -985,7 +950,6 @@ Widget _buildGrowthTrendSection() {
                     onTap: () => _showDetailDialog(item['title'], item['description'], url: item['source_url'], category: '適齡繪本推薦'),
                     child: Container(
                       width: 120,
-                      // 此 Container 即為「長棕色方框」，包含圖片與文字
                       decoration: BoxDecoration(
                         color: const Color(0xFFd8cec6), // 棕色/米色背景
                         borderRadius: BorderRadius.circular(25),
@@ -1003,7 +967,7 @@ Widget _buildGrowthTrendSection() {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          // 書名 (現在已在邊框內)
+                          // 書名
                           Text(
                             item['title'] ?? '書籍',
                             textAlign: TextAlign.center,
@@ -1026,15 +990,13 @@ Widget _buildGrowthTrendSection() {
       ),
     );
   }
-  // 3. 精選文章 (直向列表)
-// 3. 精選文章 (直向列表，符合圖1樣式)
+  // 精選文章
   Widget _buildArticlesSection() {
     final rawArticles = _apiData?['articles'] as List?;
     if (rawArticles == null || rawArticles.isEmpty) {
       return const Text('暫無文章推薦', style: TextStyle(color: Colors.grey));
     }
 
-    // 過濾邏輯保持不變
     final displayArticles = rawArticles.where((item) {
       final tags = List<String>.from(item['tags'] ?? []);
       if (tags.contains('#Event_Fever')) return _latestTemp != null && _latestTemp! > 38.0;
@@ -1123,7 +1085,7 @@ Widget _buildGrowthTrendSection() {
     );
   }
 
-  // 4. 生長建議 (保留舊版邏輯)
+  // 生長建議
   Widget _buildTrendRecommendations() {
     if (!_isGrowthSpurt) return const SizedBox.shrink();
     return Container(
@@ -1156,13 +1118,13 @@ Widget _buildGrowthTrendSection() {
     );
   }
 }
-// 自定義裁剪器：在兩側中間各挖掉一個半圓
+// 自定義裁剪器
 class TicketClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     Path path = Path();
     double radius = 12.0; // 挖掉半圓的半徑
-    double vOffset = 120.0; // 缺口垂直位置，可根據標題高度調整
+    double vOffset = 120.0;
 
     path.lineTo(0, vOffset - radius);
     path.arcToPoint(

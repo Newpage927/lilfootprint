@@ -27,7 +27,7 @@ class BmiChartScreen extends StatelessWidget {
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('image/background.png'), // 全域背景圖
+            image: AssetImage('image/background.png'),
             fit: BoxFit.cover,
             repeat: ImageRepeat.repeat,
           ),
@@ -100,7 +100,6 @@ class BmiChartScreen extends StatelessWidget {
       }
     }
 
-    // 1. 取得身高體重參考數據 (對應您更新後的 GrowthDataService)
     final refData = GrowthDataService.boyGrowthReference; 
 
     return SfCartesianChart(

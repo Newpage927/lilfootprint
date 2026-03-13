@@ -2,9 +2,7 @@ import 'dart:convert';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-/// 本地緩存數據庫類
-/// 用於存儲 API 返回的地點數據，實現離線優先的讀取策略
-/// 注意：Web 平台不支持 SQLite，將跳過緩存功能
+/// 本地緩存數據庫類，使用 sqflite 實現跨平台的 SQLite 數據庫存儲
 class PlaceCacheDB {
   static Database? _db;
 

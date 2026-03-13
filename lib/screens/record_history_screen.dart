@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../service/database_helper.dart';
-// 若無此檔案，可移除並將顏色改為 Colors.blue
 
 class RecordHistoryScreen extends StatefulWidget {
   const RecordHistoryScreen({super.key});
@@ -31,7 +30,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     });
   }
 
-  // 導航到詳細頁面，並在返回時刷新圖表 (因為可能刪除了資料)
+  // 導航到詳細頁面，並在返回時刷新圖表
   void _navigateToDetail(String title, String type) async {
     await Navigator.push(
       context,
@@ -45,11 +44,9 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 1. 移除原本的 AppBar
       backgroundColor: Colors.transparent, 
       body: Stack(
         children: [
-          // 2. 背景設定 (格紋與頂部裝飾)
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -68,13 +65,11 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
             ),
           ),
 
-          // 3. 主要內容區塊
           SafeArea(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : CustomScrollView(
                     slivers: [
-                      // 大標題區塊：模仿 RecordsScreen 樣式
                       SliverToBoxAdapter(
                         child: Container(
                           padding: const EdgeInsets.only(top: 40, left: 24, bottom: 20),
@@ -89,7 +84,6 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                         ),
                       ),
 
-                      // 圖表列表
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         sliver: SliverList(
@@ -131,7 +125,6 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     );
   }
 
-  // --- UI 元件：圖表卡片外框 ---
 Widget _buildChartCard({
     required String title,
     required IconData icon,
@@ -140,7 +133,6 @@ Widget _buildChartCard({
     required Widget chart,
   }) {
     return Container(
-      // 1. 加上與專案風格一致的橘色大外框
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF5EA), // 淺米色背景
@@ -153,13 +145,12 @@ Widget _buildChartCard({
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 2. 標題與「詳細記錄」按鈕列
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Icon(icon, color: const Color(0xFF4A0E0E)), // 使用深褐色圖示保持色調一致
+                  Icon(icon, color: const Color(0xFF4A0E0E)), // 使用深褐色圖示
                   const SizedBox(width: 8),
                   Text(
                     title,
@@ -171,7 +162,6 @@ Widget _buildChartCard({
                   ),
                 ],
               ),
-              // 3. 右上角的「詳細記錄」文字按鈕
               TextButton(
                 onPressed: () => _navigateToDetail(title, type),
                 style: TextButton.styleFrom(
@@ -192,7 +182,6 @@ Widget _buildChartCard({
           ),
           const SizedBox(height: 16),
           
-          // 4. 圖表內容區塊 (移除了 Card，改用 Container 裝載以利排版)
           Container(
             height: 200,
             padding: const EdgeInsets.all(12),
@@ -227,10 +216,8 @@ Widget _buildOtherCard() {
     );
   }
 
-  // --- 圖表邏輯：體溫折線圖 ---
   Widget _buildTempChart() {
     final data = _allRecords.where((r) => r['type'] == 'health_temp').toList();
-    // 排序：舊 -> 新
     data.sort((a, b) => a['time'].compareTo(b['time']));
     
     if (data.isEmpty) return const Center(child: Text('無資料', style: TextStyle(color: Colors.grey)));
@@ -245,7 +232,7 @@ Widget _buildOtherCard() {
     return LineChart(
       LineChartData(
         gridData: const FlGridData(show: false),
-        titlesData: const FlTitlesData(show: false), // 簡約模式，不顯示座標軸文字
+        titlesData: const FlTitlesData(show: false),
         borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade200)),
         lineBarsData: [
           LineChartBarData(
@@ -261,7 +248,6 @@ Widget _buildOtherCard() {
     );
   }
 
-  // --- 圖表邏輯：體重折線圖 ---
   Widget _buildWeightChart() {
     final data = _allRecords.where((r) => r['type'] == 'growth_body').toList();
     data.sort((a, b) => a['time'].compareTo(b['time']));
@@ -298,14 +284,12 @@ Widget _buildOtherCard() {
     );
   }
 
-  // --- 圖表邏輯：睡眠長條圖 ---
   Widget _buildSleepChart() {
     final data = _allRecords.where((r) => r['type'] == 'routine_sleep').toList();
     data.sort((a, b) => a['time'].compareTo(b['time']));
 
     if (data.isEmpty) return const Center(child: Text('無資料', style: TextStyle(color: Colors.grey)));
 
-    // 取最近 7 筆，避免圖表太擠
     final recentData = data.length > 10 ? data.sublist(data.length - 10) : data;
 
     List<BarChartGroupData> barGroups = [];
@@ -339,12 +323,9 @@ Widget _buildOtherCard() {
   }
 }
 
-// ==========================================
-// 第二層頁面：詳細列表 (包含刪除功能)
-// ==========================================
 class RecordDetailScreen extends StatefulWidget {
   final String title;
-  final String filterType; // 用來過濾顯示哪一類的資料
+  final String filterType;
 
   const RecordDetailScreen({super.key, required this.title, required this.filterType});
 
@@ -428,7 +409,7 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                         return const Center(child: Text('沒有資料'));
                       }
 
-                      // 這裡進行過濾：只顯示符合 filterType 的資料
+                      // 進行過濾：只顯示符合 filterType 的資料
                       final allRecords = snapshot.data!;
                       final filteredRecords = widget.filterType == 'others'
                           ? allRecords.where((r) => !['health_temp', 'growth_body', 'routine_sleep'].contains(r['type'])).toList()

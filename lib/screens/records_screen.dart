@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // 需在 pubspec.yaml 加入 intl
+import 'package:intl/intl.dart';
 import '../config/theme.dart';
 import '../service/database_helper.dart';
 
@@ -33,11 +33,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 1. 強制讓 Scaffold 背景透明，確保只看到我們自定義的背景圖
       backgroundColor: Colors.transparent, 
       body: Stack(
         children: [
-          // 2. 最底層：格子背景圖
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -47,8 +45,6 @@ class _RecordsScreenState extends State<RecordsScreen> {
             ),
           ),
 
-          // 3. 中層：頂部橘色不規則裝飾圖 (bg1.png)
-          // 放在 SafeArea 之外，才能真正貼齊螢幕頂部
           Positioned(
             top: 0,
             left: 0,
@@ -59,11 +55,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
             ),
           ),
 
-          // 4. 最上層：滾動內容
           SafeArea(
             child: CustomScrollView(
               slivers: [
-                // 標題區塊：直接用 Padding 撐開高度，不要在裡面寫 Stack
                 SliverToBoxAdapter(
                   child: Container(
                     padding: const EdgeInsets.only(top: 40, left: 24, bottom: 20),
@@ -78,7 +72,6 @@ class _RecordsScreenState extends State<RecordsScreen> {
                   ),
                 ),
                 
-                // 紀錄項目列表 (Grid)
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   sliver: SliverGrid(
@@ -97,7 +90,6 @@ class _RecordsScreenState extends State<RecordsScreen> {
                   ),
                 ),
                 
-                // 發展里程碑 (大卡片)
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
                   sliver: SliverToBoxAdapter(
@@ -123,7 +115,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(imagePath, height: 120, fit: BoxFit.contain), // 貓頭鷹插圖
+            Image.asset(imagePath, height: 120, fit: BoxFit.contain),
             const SizedBox(height: 8),
             Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4F000B))),
           ],
@@ -144,13 +136,11 @@ class _RecordsScreenState extends State<RecordsScreen> {
         ),
         child: Stack(
           children: [
-            // 1. 左側主要貓頭鷹圖片
             Align(
               alignment: Alignment.centerLeft,
               child: Image.asset(imagePath, width: 80, fit: BoxFit.contain),
             ),
             
-            // 2. 中間文字標題
             Align(
               alignment: Alignment.center,
               child: Text(
@@ -163,13 +153,12 @@ class _RecordsScreenState extends State<RecordsScreen> {
               ),
             ),
 
-            // 3. 右下角的腳印圖 (如同圖 1 的樣式)
             Positioned(
               right: 0,
               bottom: 10,
               child: Image.asset(
-                'image/footprints.png', // 請確保您的 assets 資料夾中有這張腳印圖片
-                width: 80,             // 調整適合的大小
+                'image/footprints.png',
+                width: 80,
                 fit: BoxFit.contain,
               ),
             ),
@@ -179,7 +168,6 @@ class _RecordsScreenState extends State<RecordsScreen> {
     );
   }
 
-  // --- 🔥 核心邏輯：彈出表單 ---
   void _showRecordForm(BuildContext context, _RecordItem item) {
     // 控制器與變數
     final TextEditingController heightController = TextEditingController();
@@ -194,7 +182,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
     VaccineType selectedVaccine = VaccineType.fiveInOne;
     DateTime vaccineDate = DateTime.now();
 
-    // 里程碑專用變數 (這裡簡化為選擇一個動作並紀錄日期)
+    // 里程碑專用變數
     String selectedMilestone = '翻身';
     DateTime milestoneDate = DateTime.now();
     final List<String> milestones = ['翻身', '坐', '爬', '走'];
@@ -207,7 +195,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setSheetState) {
             
-            // 內部函式：選擇日期時間
+            // 選擇日期時間
             Future<void> pickDateTime(bool isStart) async {
               final date = await showDatePicker(
                 context: context,
@@ -230,7 +218,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
               });
             }
 
-            // 內部函式：單純選擇日期
+            // 單純選擇日期
             Future<void> pickDate(Function(DateTime) onPicked) async {
               final date = await showDatePicker(
                 context: context,
@@ -262,7 +250,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                   const Divider(),
                   const SizedBox(height: 10),
 
-                  // --- 根據類型顯示不同表單 ---
+                  // 根據類型顯示不同表單
                   if (item.type == 'growth_body') ...[
                     _buildNumberInput('身高', 'cm', heightController),
                     const SizedBox(height: 16),
@@ -342,7 +330,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () async {
-                        // 1. 組合資料
+                        // 組合資料
                         String finalValue = "";
                         String finalNote = "";
                         String finalTime = DateTime.now().toIso8601String(); // 預設現在
@@ -376,23 +364,13 @@ class _RecordsScreenState extends State<RecordsScreen> {
                           finalNote = "達成";
                         }
 
-                        // 2. 存入資料庫
+                        // 存入資料庫
                         await DatabaseHelper.instance.createRecord(
                           item.type, 
                           finalValue, 
                           finalNote, 
-                          customTime: DateTime.parse(finalTime) // 這樣歷史紀錄的時間就會是你選的時間
+                          customTime: DateTime.parse(finalTime)
                         );
-                        
-                        // 若是改了時間（如補登疫苗），這裡需要更精細的DB操作，
-                        // 但 DatabaseHelper.createRecord 目前只支援當下時間或需要改寫。
-                        // 為了不改動 DB Helper，我們這裡如果是「過去的時間」，可能需要手動 SQL，
-                        // 但為了簡單，我們先依然用 createRecord，但這會導致 DB 內的 time 欄位是「紀錄當下」。
-                        // --- 進階修補 ---
-                        // 如果真的很在意「事件發生時間」vs「紀錄時間」，建議修改 DatabaseHelper 的 createRecord 
-                        // 讓它可以接收 time 參數。目前我們先依賴 createRecord 的預設行為，
-                        // 唯獨「疫苗」和「里程碑」這種明確選日期的，我們希望列表顯示的是那一天。
-                        // (註：下面我會提供一個小技巧來修正這點)
 
                         if (context.mounted) {
                           Navigator.pop(context);
