@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; // 需在 pubspec.yaml 加入 intl
 import '../config/theme.dart';
 import '../service/database_helper.dart';
+import 'record_history_screen.dart';
 
 // 定義疫苗類型 Enum
 enum VaccineType { bcg, hepB, fiveInOne, pneumococcal, flu, rotavirus, japaneseEnc, other }
@@ -33,141 +34,123 @@ class _RecordsScreenState extends State<RecordsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, 
-      body: Stack(
+      appBar: AppBar(
+        title: const Text('詳細育兒紀錄'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history, color: Colors.black87),
+            tooltip: '查看歷史',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const RecordHistoryScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. 生理成長 (身高、體重)
+            _buildSectionHeader('生理成長', Icons.show_chart),
+            _buildGrid(context, [
+              _RecordItem('身高/體重', Icons.straighten, Colors.green.shade100, 'growth_body'),
+            ]),
+            
+            const SizedBox(height: 24),
+
+            // 2. 日常作息 (睡眠)
+            _buildSectionHeader('日常作息', Icons.access_time),
+            _buildGrid(context, [
+              _RecordItem('睡眠紀錄', Icons.bed, Colors.indigo.shade100, 'routine_sleep'),
+              // 如果你要保留奶量、排泄，可以加回來，這裡先專注於你的新需求
+            ]),
+            
+            const SizedBox(height: 24),
+
+            // 3. 健康醫療 (體溫、疫苗)
+            _buildSectionHeader('健康醫療', Icons.medical_services),
+            _buildGrid(context, [
+              _RecordItem('體溫', Icons.thermostat, Colors.red.shade100, 'health_temp'),
+              _RecordItem('疫苗接種', Icons.vaccines, Colors.blue.shade100, 'health_vaccine'),
+            ]),
+
+            const SizedBox(height: 24),
+
+            // 4. 發展里程碑
+            _buildSectionHeader('發展里程碑', Icons.flag),
+            _buildGrid(context, [
+              _RecordItem('動作發展', Icons.directions_run, Colors.purple.shade100, 'growth_milestone'),
+            ]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- UI 建構區塊 ---
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('image/background.png'),
-                repeat: ImageRepeat.repeat,
-              ),
-            ),
-          ),
-
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              'image/bg1.png', 
-              fit: BoxFit.fitWidth,
-            ),
-          ),
-
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Container(
-                    padding: const EdgeInsets.only(top: 40, left: 24, bottom: 20),
-                    child: const Text(
-                      '詳細育兒紀錄',
-                      style: TextStyle(
-                        fontSize: 32, 
-                        fontWeight: FontWeight.bold, 
-                        color: Color(0xFF4F000B),
-                      ),
-                    ),
-                  ),
-                ),
-                
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 0.9,
-                    ),
-                    delegate: SliverChildListDelegate([
-                      _buildRecordCard('身高/體重', 'image/owl_growth.png', 'growth_body'),
-                      _buildRecordCard('睡眠紀錄', 'image/owl_sleep.png', 'routine_sleep'),
-                      _buildRecordCard('體溫', 'image/owl_temp.png', 'health_temp'),
-                      _buildRecordCard('疫苗接種', 'image/owl_vaccine.png', 'health_vaccine'),
-                    ]),
-                  ),
-                ),
-                
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-                  sliver: SliverToBoxAdapter(
-                    child: _buildLargeRecordCard('發展里程碑', 'image/owl_milestone.png', 'growth_milestone'),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          Icon(icon, size: 20, color: AppTheme.subTextColor),
+          const SizedBox(width: 8),
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textColor)),
         ],
       ),
     );
   }
-  Widget _buildRecordCard(String label, String imagePath, String type) {
-    return GestureDetector(
-      onTap: () => _showRecordForm(context, _RecordItem(label, Icons.edit, Colors.orange, type)),
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF9F0),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFFFF8C00), width: 3),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(imagePath, height: 120, fit: BoxFit.contain),
-            const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4F000B))),
-          ],
-        ),
+
+  Widget _buildGrid(BuildContext context, List<_RecordItem> items) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3, // 改成 3 欄比較寬敞
+        childAspectRatio: 1.0,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
       ),
-    );
-  }
-  Widget _buildLargeRecordCard(String label, String imagePath, String type) {
-    return GestureDetector(
-      onTap: () => _showRecordForm(context, _RecordItem(label, Icons.edit, Colors.orange, type)),
-      child: Container(
-        height: 140,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF9F0),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFFFF8C00), width: 3),
-        ),
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Image.asset(imagePath, width: 80, fit: BoxFit.contain),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return InkWell(
+          onTap: () => _showRecordForm(context, item),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 2))
+              ],
+              border: Border.all(color: item.color.withOpacity(0.5), width: 1),
             ),
-            
-            Align(
-              alignment: Alignment.center,
-              child: Text(
-                label, 
-                style: const TextStyle(
-                  fontSize: 20, 
-                  fontWeight: FontWeight.bold, 
-                  color: Color(0xFF4F000B),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: item.color.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(item.icon, color: Colors.black87, size: 28),
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(item.label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              ],
             ),
-
-            Positioned(
-              right: 0,
-              bottom: 10,
-              child: Image.asset(
-                'image/footprints.png',
-                width: 80,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
+  // --- 🔥 核心邏輯：彈出表單 ---
   void _showRecordForm(BuildContext context, _RecordItem item) {
     // 控制器與變數
     final TextEditingController heightController = TextEditingController();
@@ -182,7 +165,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
     VaccineType selectedVaccine = VaccineType.fiveInOne;
     DateTime vaccineDate = DateTime.now();
 
-    // 里程碑專用變數
+    // 里程碑專用變數 (這裡簡化為選擇一個動作並紀錄日期)
     String selectedMilestone = '翻身';
     DateTime milestoneDate = DateTime.now();
     final List<String> milestones = ['翻身', '坐', '爬', '走'];
@@ -195,7 +178,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setSheetState) {
             
-            // 選擇日期時間
+            // 內部函式：選擇日期時間
             Future<void> pickDateTime(bool isStart) async {
               final date = await showDatePicker(
                 context: context,
@@ -218,7 +201,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
               });
             }
 
-            // 單純選擇日期
+            // 內部函式：單純選擇日期
             Future<void> pickDate(Function(DateTime) onPicked) async {
               final date = await showDatePicker(
                 context: context,
@@ -250,7 +233,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                   const Divider(),
                   const SizedBox(height: 10),
 
-                  // 根據類型顯示不同表單
+                  // --- 根據類型顯示不同表單 ---
                   if (item.type == 'growth_body') ...[
                     _buildNumberInput('身高', 'cm', heightController),
                     const SizedBox(height: 16),
@@ -330,7 +313,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () async {
-                        // 組合資料
+                        // 1. 組合資料
                         String finalValue = "";
                         String finalNote = "";
                         String finalTime = DateTime.now().toIso8601String(); // 預設現在
@@ -364,13 +347,23 @@ class _RecordsScreenState extends State<RecordsScreen> {
                           finalNote = "達成";
                         }
 
-                        // 存入資料庫
+                        // 2. 存入資料庫
                         await DatabaseHelper.instance.createRecord(
                           item.type, 
                           finalValue, 
                           finalNote, 
-                          customTime: DateTime.parse(finalTime)
+                          customTime: DateTime.parse(finalTime) // 這樣歷史紀錄的時間就會是你選的時間
                         );
+                        
+                        // 若是改了時間（如補登疫苗），這裡需要更精細的DB操作，
+                        // 但 DatabaseHelper.createRecord 目前只支援當下時間或需要改寫。
+                        // 為了不改動 DB Helper，我們這裡如果是「過去的時間」，可能需要手動 SQL，
+                        // 但為了簡單，我們先依然用 createRecord，但這會導致 DB 內的 time 欄位是「紀錄當下」。
+                        // --- 進階修補 ---
+                        // 如果真的很在意「事件發生時間」vs「紀錄時間」，建議修改 DatabaseHelper 的 createRecord 
+                        // 讓它可以接收 time 參數。目前我們先依賴 createRecord 的預設行為，
+                        // 唯獨「疫苗」和「里程碑」這種明確選日期的，我們希望列表顯示的是那一天。
+                        // (註：下面我會提供一個小技巧來修正這點)
 
                         if (context.mounted) {
                           Navigator.pop(context);

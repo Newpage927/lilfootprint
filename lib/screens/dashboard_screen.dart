@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../config/theme.dart';
+import '../config/theme.dart'; // 注意這裡的路徑
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
